@@ -5,15 +5,11 @@ import (
 	"flag"
 	"fmt"
 	"log"
-	"math/rand"
 	"os"
 	"strconv"
 
 	"github.com/Lucas-884e/gonet/nnet"
-)
-
-var (
-	data = flag.String("i", "data/data.csv", "Input data file name")
+	"github.com/Lucas-884e/gonet/training"
 )
 
 type trainingSample struct {
@@ -33,9 +29,9 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
-	removeMeansFromTrainingSamples(samples)
-	shuffleTrainingSamples(samples)
-	trainingSet, validationSet, testingSet := splitDataSet(samples)
+	normalizeTrainingSamplesByRemovingMeans(samples)
+	training.ShuffleSamples(samples)
+	trainingSet, validationSet, testingSet := training.SplitDataSet(samples)
 
 	nn := constructNetwork()
 	log.Printf("(Before training) Prediction precision: validation set = %g | testing set = %g",
@@ -45,11 +41,11 @@ func main() {
 train:
 	for epoch := 0; epoch < 50; epoch++ {
 		// Shuffle before each epoch.
-		shuffleTrainingSamples(trainingSet)
+		training.ShuffleSamples(trainingSet)
 		// One training epoch.
 		for t, sample := range trainingSet {
 			nn.PropagateSample(sample.xs, sample.ys)
-			if nn.UpdateWeights(annealingLearningRate(0.1, 1000, int64(epoch*tsSize+t))) {
+			if nn.UpdateWeights(training.AnnealingLearningRate(0.1, 1000, int64(epoch*tsSize+t))) {
 				log.Println("* Reached stopping criterion.")
 				break train
 			}
@@ -57,16 +53,9 @@ train:
 		precision := predictionPrecision(nn, validationSet)
 		log.Printf("[Epoch %d] Prediction precision: %g", epoch, precision)
 	}
-	//nn.Print()
+	nn.Print()
 
 	log.Println("(After training) Prediction precision:", predictionPrecision(nn, testingSet))
-}
-
-// annealingLearningRate returns an annealed learning rate by the following formula:
-//
-//	η = η_0 / (1 + n / tau)
-func annealingLearningRate(eta0 float64, tau, n int64) float64 {
-	return 0.1 / (1 + float64(n/tau))
 }
 
 func predictionPrecision(nn *nnet.FCNNet, dataSet []trainingSample) float32 {
@@ -88,22 +77,7 @@ func constructNetwork() *nnet.FCNNet {
 	return nn
 }
 
-func splitDataSet(samples []trainingSample) (training, validation, testing []trainingSample) {
-	var (
-		total           = len(samples)
-		trainingSplit   = 7 * total / 10
-		validationSplit = 9 * total / 10
-	)
-	return samples[:trainingSplit], samples[trainingSplit:validationSplit], samples[validationSplit:]
-}
-
-func shuffleTrainingSamples(samples []trainingSample) {
-	rand.Shuffle(len(samples), func(i, j int) {
-		samples[i], samples[j] = samples[j], samples[i]
-	})
-}
-
-func removeMeansFromTrainingSamples(samples []trainingSample) (means []float64) {
+func normalizeTrainingSamplesByRemovingMeans(samples []trainingSample) (means []float64) {
 	for _, sample := range samples {
 		if len(means) == 0 {
 			means = make([]float64, len(sample.xs))

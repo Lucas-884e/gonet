@@ -5,6 +5,8 @@ import (
 	"math"
 	"math/rand"
 	"time"
+
+	"github.com/Lucas-884e/gonet/training"
 )
 
 // ActivationFunc defines the functional signature of activation functions and
@@ -18,9 +20,11 @@ func IDActivator(v float64) float64 { return v }
 func DIDActivator(float64) float64 { return 1 }
 
 // LogisticActivator returns the Logistic activation function:
-//                        1
-//   y = φ (v) = --------------------
-//                 1 + exp(- a * v)
+//
+//	                     1
+//	y = φ (v) = --------------------
+//	              1 + exp(- a * v)
+//
 // with the given parameter `a`.
 func LogisticActivator(a float64) ActivationFunc {
 	return func(v float64) float64 {
@@ -30,7 +34,8 @@ func LogisticActivator(a float64) ActivationFunc {
 
 // DLogisticActivator returns the derivative function of logistic activation
 // function, but in terms of `y = φ (v)` instead of `v`:
-//   φ '(v) = a * φ (v) [1 - φ (v)] = a * y * (1 - y)
+//
+//	φ '(v) = a * φ (v) [1 - φ (v)] = a * y * (1 - y)
 func DLogisticActivator(a float64) ActivationFunc {
 	return func(y float64) float64 {
 		return a * y * (1 - y)
@@ -38,7 +43,9 @@ func DLogisticActivator(a float64) ActivationFunc {
 }
 
 // TanhActivator returns a tanh activation function:
-//   y = φ (v) = a * tanh(b * v)
+//
+//	y = φ (v) = a * tanh(b * v)
+//
 // with the given parameter `a` and `b`.
 func TanhActivator(a, b float64) ActivationFunc {
 	return func(v float64) float64 {
@@ -48,7 +55,8 @@ func TanhActivator(a, b float64) ActivationFunc {
 
 // DTanhActivator returns the derivative function of tanh activation function,
 // but in terms of `y = φ (v)` instead of `v`:
-//   φ '(v) = (b / a) * [a - φ (v)] * [a + φ (v)] = (b / a) * (a - y) * (a + y)
+//
+//	φ '(v) = (b / a) * [a - φ (v)] * [a + φ (v)] = (b / a) * (a - y) * (a + y)
 func DTanhActivator(a, b float64) ActivationFunc {
 	return func(y float64) float64 {
 		return (b / a) * (a - y) * (a + y)
@@ -115,18 +123,14 @@ func NewFCNNet(inputSize int, activator, dActivator ActivationFunc) *FCNNet {
 	} else if dActivator == nil {
 		panic("Must provide a derivative function for non-nil activation function")
 	}
-	inputLayer := &Layer{
-		size:    inputSize,
-		neurons: []*Neuron{&Neuron{n: 0, output: 1}},
-	}
-	for i := 1; i <= inputSize; i++ {
-		inputLayer.neurons = append(inputLayer.neurons, &Neuron{n: i})
-	}
-	return &FCNNet{
-		layers:            []*Layer{inputLayer},
+
+	net := &FCNNet{
 		defaultActivator:  activator,
 		defaultDActivator: dActivator,
 	}
+	// Add input layer.
+	net.AddLayer(inputSize)
+	return net
 }
 
 // AddLayer adds a new layer with the default activation function and its derivative.
@@ -152,8 +156,10 @@ func (net *FCNNet) AddLayerWithActivator(size int, activator, dActivator Activat
 	}
 
 	layer := &Layer{
-		size:    size,
-		neurons: []*Neuron{&Neuron{n: 0, output: 1}},
+		size: size,
+		// Place a fake neuron as bias node (which has index 0 and fixed output 1)
+		// in advance.
+		neurons: []*Neuron{{n: 0, output: 1}},
 	}
 	for n := 1; n <= size; n++ {
 		neuron := &Neuron{
@@ -161,11 +167,13 @@ func (net *FCNNet) AddLayerWithActivator(size int, activator, dActivator Activat
 			activator:  activator,
 			dActivator: dActivator,
 		}
-		for p := 0; p <= net.layers[len(net.layers)-1].size; p++ {
-			neuron.weights = append(neuron.weights, Weight{
-				n: n, // Range: [1, current_layer_size]
-				p: p, // Range: [0, previous_layer_size]
-			})
+		if depth := len(net.layers); depth > 0 {
+			for p := 0; p <= net.layers[depth-1].size; p++ {
+				neuron.weights = append(neuron.weights, Weight{
+					n: n, // Range: [1, current_layer_size]
+					p: p, // Range: [0, previous_layer_size]
+				})
+			}
 		}
 		layer.neurons = append(layer.neurons, neuron)
 	}
@@ -187,14 +195,10 @@ func (net *FCNNet) RandomizeInitialWeights() {
 			for k := range n.weights {
 				// Uniform random distribution in the range: [-sqrt(3/m), sqrt(3/m)],
 				// where `m` is the number of synaptic connections of neuron `n`.
-				n.weights[k].v = randomUniformSample(-max, max)
+				n.weights[k].v = training.RandomUniformSample(-max, max)
 			}
 		}
 	}
-}
-
-func randomUniformSample(min, max float64) float64 {
-	return min + rand.Float64()*(max-min)
 }
 
 // feedInputSample feeds a training sample to the network input and output.
@@ -217,7 +221,9 @@ func (net *FCNNet) feedInputSample(xs, ys []float64) {
 }
 
 // forwardPropagate does the forward pass computation:
-//   y_j = φ (Σ_k [W_{j,k} * y_k(previous_layer)])
+//
+//	y_j = φ (Σ_k [W_{j,k} * y_k(previous_layer)])
+//
 // where `Σ_k` is the sum over neuron index `k` (starting from 0 which corresponds
 // to the bias term) in previous layer and `φ (v)` is the activation function.
 func (net *FCNNet) forwardPropagate() {
@@ -235,9 +241,11 @@ func (net *FCNNet) forwardPropagate() {
 }
 
 // backwardPropagate does the backward propagation computation:
-//          / φ '(v) * (d_j - y_j) , for output layer
-//   δ_j = {
-//          \ φ '(v) * Σ_k [δ_k(next_layer) * W_{k,j}] , for hidden layer
+//
+//	       / φ '(v) * (d_j - y_j) , for output layer
+//	δ_j = {
+//	       \ φ '(v) * Σ_k [δ_k(next_layer) * W_{k,j}] , for hidden layer
+//
 // where `d_j` is the desired response whose estimate is `y_j`, `Σ_k` means
 // summation over index `k` and `δ_k(next_layer)` is the local gradient for
 // k-th neuron in next layer.
