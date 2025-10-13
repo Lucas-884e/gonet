@@ -1,3 +1,7 @@
+examples/digit_ocr/data/sklearn/*.csv
+examples/digit_ocr/data/mnist/*.csv
+
+
 # Binaries for programs and plugins
 *.exe
 *.dll
