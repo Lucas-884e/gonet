@@ -2,6 +2,7 @@ package nnet
 
 import (
 	"fmt"
+	"math"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -22,29 +23,27 @@ func TestFCNNet(t *testing.T) {
 		equal bool
 		msg   string
 
-		logisticActivator  = LogisticActivator(1)
-		dLogisticActivator = DLogisticActivator(1)
-
-		net = NewFCNNet(2, logisticActivator, dLogisticActivator)
+		sigmoid = SigmoidActivator(1)
+		net     = NewFCNNet(2, sigmoid)
 
 		expectLayer0 = &Layer{
 			size: 2,
 			neurons: []*Neuron{
 				{n: 0, output: 1},
-				{n: 1},
-				{n: 2},
+				{n: 1, activator: sigmoid},
+				{n: 2, activator: sigmoid},
 			},
 		}
 		expectLayer1 = &Layer{
 			size: 2,
 			neurons: []*Neuron{
 				{n: 0, output: 1},
-				{n: 1, activator: IDActivator, dActivator: DIDActivator, weights: []Weight{
+				{n: 1, activator: IDActivator(), weights: []Weight{
 					{n: 1, p: 0},
 					{n: 1, p: 1},
 					{n: 1, p: 2},
 				}},
-				{n: 2, activator: IDActivator, dActivator: DIDActivator, weights: []Weight{
+				{n: 2, activator: IDActivator(), weights: []Weight{
 					{n: 2, p: 0},
 					{n: 2, p: 1},
 					{n: 2, p: 2},
@@ -55,17 +54,17 @@ func TestFCNNet(t *testing.T) {
 			size: 3,
 			neurons: []*Neuron{
 				{n: 0, output: 1},
-				{n: 1, activator: logisticActivator, dActivator: dLogisticActivator, weights: []Weight{
+				{n: 1, activator: sigmoid, weights: []Weight{
 					{n: 1, p: 0},
 					{n: 1, p: 1},
 					{n: 1, p: 2},
 				}},
-				{n: 2, activator: logisticActivator, dActivator: dLogisticActivator, weights: []Weight{
+				{n: 2, activator: sigmoid, weights: []Weight{
 					{n: 2, p: 0},
 					{n: 2, p: 1},
 					{n: 2, p: 2},
 				}},
-				{n: 3, activator: logisticActivator, dActivator: dLogisticActivator, weights: []Weight{
+				{n: 3, activator: sigmoid, weights: []Weight{
 					{n: 3, p: 0},
 					{n: 3, p: 1},
 					{n: 3, p: 2},
@@ -76,13 +75,13 @@ func TestFCNNet(t *testing.T) {
 			size: 2,
 			neurons: []*Neuron{
 				{n: 0, output: 1},
-				{n: 1, activator: logisticActivator, dActivator: dLogisticActivator, weights: []Weight{
+				{n: 1, activator: sigmoid, weights: []Weight{
 					{n: 1, p: 0},
 					{n: 1, p: 1},
 					{n: 1, p: 2},
 					{n: 1, p: 3},
 				}},
-				{n: 2, activator: logisticActivator, dActivator: dLogisticActivator, weights: []Weight{
+				{n: 2, activator: sigmoid, weights: []Weight{
 					{n: 2, p: 0},
 					{n: 2, p: 1},
 					{n: 2, p: 2},
@@ -94,14 +93,13 @@ func TestFCNNet(t *testing.T) {
 
 	// test NewFCNNet
 	assert.Equal(t, 1, len(net.layers))
-	assert.True(t, equalFuncs(logisticActivator, net.defaultActivator))
-	assert.True(t, equalFuncs(dLogisticActivator, net.defaultDActivator))
+	assert.True(t, equalActivators(sigmoid, net.defaultActivator))
 	equal, msg = equalLayers(net.layers[0], expectLayer0)
 	assert.Truef(t, equal, msg)
 
 	// test AddLayer
 	// add layer 1
-	net.AddLayerWithActivator(2, IDActivator, DIDActivator)
+	net.AddLayerWithActivator(2, IDActivator())
 	assert.Equal(t, 2, len(net.layers))
 	equal, msg = equalLayers(net.layers[1], expectLayer1)
 	assert.Truef(t, equal, msg)
@@ -161,20 +159,20 @@ func TestFCNNet(t *testing.T) {
 		y12 = 0.7 + 0.8*y01 + 1*y02
 		// y^2_j = φ (W^2_{j0} + W^2_{j1} * y^1_1 + W^2_{j2} * y^1_2)
 		// where φ is the logistic activation function.
-		y21 = logisticActivator(1 + 0.2*y11 + 0.6*y12)
-		y22 = logisticActivator(0.4 + 1*y11 + 1*y12)
-		y23 = logisticActivator(1 + 1*y11 + 0.9*y12)
+		y21 = sigmoid.A(1 + 0.2*y11 + 0.6*y12)
+		y22 = sigmoid.A(0.4 + 1*y11 + 1*y12)
+		y23 = sigmoid.A(1 + 1*y11 + 0.9*y12)
 		// y^3_j = φ (W^3_{j0} + W^3_{j1} * y^2_1 + W^3_{j2} * y^2_2 + W^3_{j3} * y^2_3)
-		y31 = logisticActivator(0.6 + 1*y21 + 0.5*y22 + 1*y23)
-		y32 = logisticActivator(1 + 0.25*y21 + 1*y22 + 0.75*y23)
+		y31 = sigmoid.A(0.6 + 1*y21 + 0.5*y22 + 1*y23)
+		y32 = sigmoid.A(1 + 0.25*y21 + 1*y22 + 0.75*y23)
 		// Compute local gradients
 		// δ^3_j = φ '(y^3_j) * (d_j - y^3_j)
-		g31 = dLogisticActivator(y31) * (d1 - y31)
-		g32 = dLogisticActivator(y32) * (d2 - y32)
+		g31 = sigmoid.D(y31) * (d1 - y31)
+		g32 = sigmoid.D(y32) * (d2 - y32)
 		// δ^2_j = φ '(y^2_j) * (g^3_1 * W^3_{1j} + g^3_2 * W^3_{2j})
-		g21 = dLogisticActivator(y21) * (g31*1 + g32*0.25)
-		g22 = dLogisticActivator(y22) * (g31*0.5 + g32*1)
-		g23 = dLogisticActivator(y23) * (g31*1 + g32*0.75)
+		g21 = sigmoid.D(y21) * (g31*1 + g32*0.25)
+		g22 = sigmoid.D(y22) * (g31*0.5 + g32*1)
+		g23 = sigmoid.D(y23) * (g31*1 + g32*0.75)
 		// δ^1_j = g^2_1 * W^2_{1j} + g^2_2 * W^2_{2j} + g^2_3 * W^2_{3j}
 		g11 = g21*0.2 + g22*1 + g23*1
 		g12 = g21*0.6 + g22*1 + g23*0.9
@@ -218,7 +216,7 @@ func TestFCNNet(t *testing.T) {
 
 	// test UpdateWeights
 	eta := 0.1
-	assert.False(t, net.UpdateWeights(eta))
+	eps := net.UpdateWeights(eta)
 	// Set expected weights. Weight updates:
 	//   ΔW^l_{ji} = η * δ^l_j * y^{l-1}_i
 	// where eta is the learning rate and
@@ -254,6 +252,18 @@ func TestFCNNet(t *testing.T) {
 	expectLayer3.neurons[2].weights[3].v += eta * g32 * y23 // W^3_{22}
 	equal, msg = equalLayers(net.layers[3], expectLayer3)
 	assert.Truef(t, equal, msg)
+
+	expectEps := norm(
+		g11, g11*y01, g11*y02, // layer 1, neuron 1
+		g12, g12*y01, g12*y02, // layer 1, neuron 2
+		g21, g21*y11, g21*y12, // layer 2, neuron 1
+		g22, g22*y11, g22*y12, // layer 2, neuron 2
+		g23, g23*y11, g23*y12, // layer 2, neuron 3
+		g31, g31*y21, g31*y22, g31*y23, // layer 3, neuron 1
+		g32, g32*y21, g32*y22, g32*y23, // layer 3, neuron 2
+	)
+	assert.Equal(t, expectEps, eps)
+
 }
 
 func equalLayers(l1, l2 *Layer) (bool, string) {
@@ -281,11 +291,8 @@ func equalNeurons(n1, n2 *Neuron) (bool, string) {
 	if n1.localGrad != n2.localGrad {
 		return false, fmt.Sprintf("neuron local gradient: %g != %g", n1.localGrad, n2.localGrad)
 	}
-	if !equalFuncs(n1.activator, n2.activator) {
+	if !equalActivators(n1.activator, n2.activator) {
 		return false, fmt.Sprintf("neuron activator: %v != %v", n1.activator, n2.activator)
-	}
-	if !equalFuncs(n1.dActivator, n2.dActivator) {
-		return false, fmt.Sprintf("neuron activator derivative: %v != %v", n1.dActivator, n2.dActivator)
 	}
 	if len(n1.weights) != len(n2.weights) {
 		return false, fmt.Sprintf("neuron weight count: %d != %d", len(n1.weights), len(n2.weights))
@@ -298,6 +305,17 @@ func equalNeurons(n1, n2 *Neuron) (bool, string) {
 	return true, ""
 }
 
-func equalFuncs(f1, f2 ActivationFunc) bool {
-	return fmt.Sprintf("%v", f1) == fmt.Sprintf("%v", f2)
+func equalActivators(a1, a2 Activator) bool {
+	if a1 == nil || a2 == nil {
+		return a1 == a2
+	}
+	return a1.String() == a2.String()
+}
+
+func norm(v ...float64) float64 {
+	var s float64
+	for _, e := range v {
+		s += e * e
+	}
+	return math.Sqrt(s)
 }

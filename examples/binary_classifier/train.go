@@ -12,6 +12,10 @@ import (
 	"github.com/Lucas-884e/gonet/training"
 )
 
+var (
+	data = flag.String("i", "data/data.csv", "Input data file name")
+)
+
 type trainingSample struct {
 	xs []float64
 	ys []float64 // 0 -> class A, 1 -> class B
@@ -33,10 +37,12 @@ func main() {
 	training.ShuffleSamples(samples)
 	trainingSet, validationSet, testingSet := training.SplitDataSet(samples)
 
-	nn := constructNetwork()
+	nn := constructNetwork(5)
 	log.Printf("(Before training) Prediction precision: validation set = %g | testing set = %g",
 		predictionPrecision(nn, validationSet),
 		predictionPrecision(nn, testingSet))
+
+	// Training process.
 	tsSize := len(trainingSet)
 train:
 	for epoch := 0; epoch < 50; epoch++ {
@@ -45,17 +51,20 @@ train:
 		// One training epoch.
 		for t, sample := range trainingSet {
 			nn.PropagateSample(sample.xs, sample.ys)
-			if nn.UpdateWeights(training.AnnealingLearningRate(0.1, 1000, int64(epoch*tsSize+t))) {
-				log.Println("* Reached stopping criterion.")
+
+			learningRate := training.AnnealingLearningRate(0.1, 1000, int64(epoch*tsSize+t))
+			if eps := nn.UpdateWeights(learningRate); eps < 1e-9 {
+				log.Printf("* Reached stopping criterion (epsilon = %g).", eps)
 				break train
 			}
 		}
-		precision := predictionPrecision(nn, validationSet)
-		log.Printf("[Epoch %d] Prediction precision: %g", epoch, precision)
-	}
-	nn.Print()
 
-	log.Println("(After training) Prediction precision:", predictionPrecision(nn, testingSet))
+		precision := predictionPrecision(nn, validationSet)
+		log.Printf("[Epoch %d] Validation set prediction precision: %g", epoch+1, precision)
+	}
+
+	log.Println("(After training) Testing set prediction precision:", predictionPrecision(nn, testingSet))
+	nn.Print()
 }
 
 func predictionPrecision(nn *nnet.FCNNet, dataSet []trainingSample) float32 {
@@ -69,9 +78,12 @@ func predictionPrecision(nn *nnet.FCNNet, dataSet []trainingSample) float32 {
 	return float32(correctCount) / float32(len(dataSet))
 }
 
-func constructNetwork() *nnet.FCNNet {
-	nn := nnet.NewFCNNet(2, nnet.TanhActivator(1, 1), nnet.DTanhActivator(1, 1))
-	nn.AddLayer(20)
+func constructNetwork(hiddenLayerSizes ...int) *nnet.FCNNet {
+	// Must use Tanh activator because the training data has target values within range: [-1, 1]
+	nn := nnet.NewFCNNet(2, nnet.TanhActivator(1, 1))
+	for _, size := range hiddenLayerSizes {
+		nn.AddLayer(size)
+	}
 	nn.AddLayer(1)
 	nn.RandomizeInitialWeights()
 	return nn
@@ -101,24 +113,26 @@ func normalizeTrainingSamplesByRemovingMeans(samples []trainingSample) (means []
 
 func recordsToTrainingSamples(records [][]string) (samples []trainingSample, err error) {
 	for _, record := range records {
-		xa, ya, xb, yb, err := recordToFloats(record)
+		x1a, x2a, x1b, x2b, err := recordToFloats(record)
 		if err != nil {
 			return nil, fmt.Errorf("Convert record %v: %v", record, err)
 		}
 		samples = append(samples, trainingSample{
-			xs: []float64{xa, ya},
-			ys: []float64{0.9},
+			xs: []float64{x1a, x2a},
+			ys: []float64{0.9}, // Sample A: Class A
 		})
 		samples = append(samples, trainingSample{
-			xs: []float64{xb, yb},
-			ys: []float64{-0.9},
+			xs: []float64{x1b, x2b},
+			ys: []float64{-0.9}, // Sample B: Class B
 		})
 	}
 	return samples, nil
 }
 
-func recordToFloats(record []string) (xa, ya, xb, yb float64, err error) {
-	floats := []*float64{&xa, &ya, &xb, &yb}
+// (x1a, x2a): coordinates with respect to (x1, x2) axes for sample A (of class A)
+// (x1b, x2b): coordinates with respect to (x1, x2) axes for sample B (of class B)
+func recordToFloats(record []string) (x1a, x2a, x1b, x2b float64, err error) {
+	floats := []*float64{&x1a, &x2a, &x1b, &x2b}
 	for i := 0; i < 4; i++ {
 		*floats[i], err = strconv.ParseFloat(record[i], 64)
 		if err != nil {

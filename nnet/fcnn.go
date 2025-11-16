@@ -4,64 +4,11 @@ import (
 	"fmt"
 	"math"
 	"math/rand"
+	"strings"
 	"time"
 
 	"github.com/Lucas-884e/gonet/training"
 )
-
-// ActivationFunc defines the functional signature of activation functions and
-// their derivative and local gradient functions.
-type ActivationFunc func(float64) float64
-
-// IDActivator defines the identity activation function.
-func IDActivator(v float64) float64 { return v }
-
-// DIDActivator defines the derivative of identity activation function.
-func DIDActivator(float64) float64 { return 1 }
-
-// LogisticActivator returns the Logistic activation function:
-//
-//	                     1
-//	y = φ (v) = --------------------
-//	              1 + exp(- a * v)
-//
-// with the given parameter `a`.
-func LogisticActivator(a float64) ActivationFunc {
-	return func(v float64) float64 {
-		return 1 / (1 + math.Exp(-a*v))
-	}
-}
-
-// DLogisticActivator returns the derivative function of logistic activation
-// function, but in terms of `y = φ (v)` instead of `v`:
-//
-//	φ '(v) = a * φ (v) [1 - φ (v)] = a * y * (1 - y)
-func DLogisticActivator(a float64) ActivationFunc {
-	return func(y float64) float64 {
-		return a * y * (1 - y)
-	}
-}
-
-// TanhActivator returns a tanh activation function:
-//
-//	y = φ (v) = a * tanh(b * v)
-//
-// with the given parameter `a` and `b`.
-func TanhActivator(a, b float64) ActivationFunc {
-	return func(v float64) float64 {
-		return a * math.Tanh(b*v)
-	}
-}
-
-// DTanhActivator returns the derivative function of tanh activation function,
-// but in terms of `y = φ (v)` instead of `v`:
-//
-//	φ '(v) = (b / a) * [a - φ (v)] * [a + φ (v)] = (b / a) * (a - y) * (a + y)
-func DTanhActivator(a, b float64) ActivationFunc {
-	return func(y float64) float64 {
-		return (b / a) * (a - y) * (a + y)
-	}
-}
 
 // Weight implements the weight element `W_{n,p}` in certain layer of a neural
 // network. `W_{n,p}` connects two neurons located at two successive layers,
@@ -94,10 +41,18 @@ type Neuron struct {
 	// summation over index `k` and `δ_k(next_layer)` is the local gradient for
 	// k-th neuron in next layer.
 	localGrad float64
-	// Activation function
-	activator ActivationFunc
-	// Derivative of activation function
-	dActivator ActivationFunc
+	// Activation function and its derivative.
+	activator Activator
+}
+
+func (n *Neuron) String() string {
+	var sb strings.Builder
+	sb.WriteString(fmt.Sprintf("#%d: ", n.n))
+	for _, w := range n.weights {
+		sb.WriteString(fmt.Sprintf(" W(%d,%d)=%g", w.n, w.p, w.v))
+	}
+	sb.WriteString(fmt.Sprintf("  Activation(%s)=%g  Gradient=%g", n.activator, n.output, n.localGrad))
+	return sb.String()
 }
 
 // Layer implements the layer structure in a neural network.
@@ -109,25 +64,18 @@ type Layer struct {
 
 // FCNNet Implements the Fully-Connect Neural Network.
 type FCNNet struct {
-	layers            []*Layer
-	desiredOutputs    []float64
-	defaultActivator  ActivationFunc
-	defaultDActivator ActivationFunc
+	layers           []*Layer
+	desiredOutputs   []float64
+	defaultActivator Activator
 }
 
 // NewFCNNet returns a new FCNNet with its input dimension equal to `inputSize`.
-func NewFCNNet(inputSize int, activator, dActivator ActivationFunc) *FCNNet {
+func NewFCNNet(inputSize int, activator Activator) *FCNNet {
 	if activator == nil {
-		activator = IDActivator
-		dActivator = DIDActivator
-	} else if dActivator == nil {
-		panic("Must provide a derivative function for non-nil activation function")
+		activator = IDActivator()
 	}
 
-	net := &FCNNet{
-		defaultActivator:  activator,
-		defaultDActivator: dActivator,
-	}
+	net := &FCNNet{defaultActivator: activator}
 	// Add input layer.
 	net.AddLayer(inputSize)
 	return net
@@ -135,24 +83,23 @@ func NewFCNNet(inputSize int, activator, dActivator ActivationFunc) *FCNNet {
 
 // AddLayer adds a new layer with the default activation function and its derivative.
 func (net *FCNNet) AddLayer(size int) {
-	net.AddLayerWithActivator(size, nil, nil)
+	net.AddLayerWithActivator(size, nil)
 }
 
 // AddLayerWithActivator adds a new layer with the given size (number of neurons)
 // to the FCNNet. This new layer will be considered the output layer until there
 // is another new layer being added to the network.
-func (net *FCNNet) AddLayerWithActivator(size int, activator, dActivator ActivationFunc) {
+func (net *FCNNet) AddLayerWithActivator(size int, activator Activator) {
+	if size == 0 {
+		return
+	}
+
 	switch {
 	case activator != nil:
-		if dActivator == nil {
-			panic("Must provide a derivative function for non-nil activation function")
-		}
 	case net.defaultActivator != nil:
 		activator = net.defaultActivator
-		dActivator = net.defaultDActivator
 	default:
-		activator = IDActivator
-		dActivator = DIDActivator
+		activator = IDActivator()
 	}
 
 	layer := &Layer{
@@ -163,9 +110,8 @@ func (net *FCNNet) AddLayerWithActivator(size int, activator, dActivator Activat
 	}
 	for n := 1; n <= size; n++ {
 		neuron := &Neuron{
-			n:          n,
-			activator:  activator,
-			dActivator: dActivator,
+			n:         n,
+			activator: activator,
 		}
 		if depth := len(net.layers); depth > 0 {
 			for p := 0; p <= net.layers[depth-1].size; p++ {
@@ -235,7 +181,7 @@ func (net *FCNNet) forwardPropagate() {
 			for _, w := range n.weights {
 				v += w.v * prev.neurons[w.p].output
 			}
-			n.output = n.activator(v)
+			n.output = n.activator.A(v)
 		}
 	}
 }
@@ -254,7 +200,7 @@ func (net *FCNNet) backwardPropagate() {
 	outputLayer := net.layers[lc-1]
 	for i, d := range net.desiredOutputs {
 		n := outputLayer.neurons[i+1]
-		n.localGrad = n.dActivator(n.output) * (d - n.output)
+		n.localGrad = n.activator.D(n.output) * (d - n.output)
 	}
 	for l := lc - 2; l >= 1; l-- {
 		curr, next := net.layers[l], net.layers[l+1]
@@ -269,7 +215,7 @@ func (net *FCNNet) backwardPropagate() {
 		}
 		for j, v := range tmp {
 			n := curr.neurons[j]
-			n.localGrad = n.dActivator(n.output) * v
+			n.localGrad = n.activator.D(n.output) * v
 		}
 	}
 }
@@ -295,10 +241,10 @@ func (net *FCNNet) Predict(xs []float64) (prediction []float64) {
 }
 
 // UpdateWeights update weights with the given learning rate `η` for one-round
-// propagation and returns whether the learning process should stop according to
-// some stop criterion.
-func (net *FCNNet) UpdateWeights(eta float64) bool {
-	var eps float64 // change in the norm of weights
+// propagation and returns how much the weights has changed (in terms of the
+// norm of all weights, eps) in this update.
+func (net *FCNNet) UpdateWeights(eta float64) (eps float64) {
+	//var eps float64 // change in the norm of weights
 	for l, layer := range net.layers {
 		if l == 0 {
 			continue
@@ -315,7 +261,7 @@ func (net *FCNNet) UpdateWeights(eta float64) bool {
 			}
 		}
 	}
-	return false
+	return math.Sqrt(eps)
 }
 
 // Print prints the network to the console.
@@ -323,8 +269,10 @@ func (net *FCNNet) Print() {
 	fmt.Println("\n## Neural network")
 	for i, l := range net.layers {
 		fmt.Printf("--------------- Layer %d: %d neurons ---------------\n", i, l.size)
-		for _, n := range l.neurons {
-			fmt.Printf("Neuron%+v\n", *n)
+		for j, n := range l.neurons {
+			if j > 0 {
+				fmt.Printf("Neuron %s\n", n.String())
+			}
 		}
 	}
 	fmt.Println("Desired outputs:", net.desiredOutputs)

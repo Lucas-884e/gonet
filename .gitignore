@@ -20,6 +20,8 @@ examples/digit_ocr/data/mnist/*.csv
 bazel-*
 *.DS_Store
 .DS_Store
+format.sh
+build.sh
 
 # IDEA Editor
 .idea/
