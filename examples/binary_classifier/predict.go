@@ -1,17 +1,17 @@
 package main
 
 import (
-	"github.com/Lucas-884e/gonet/nnet"
+	"github.com/Lucas-884e/gonet"
 )
 
 func predict(hiddenLayerSizes ...int) {
-	net := nnet.NewFCNNet(2, nnet.TanhActivator(1, 1))
+	net := gonet.NewFCNNet(2, gonet.LossMaxMargin, gonet.ReluActivator())
 	for _, size := range hiddenLayerSizes {
 		net.AddLayer(size)
 	}
-	net.AddLayer(1)
+	net.AddLayerWithActivator(1, gonet.LinearActivator())
 
 	net.RandomizeInitialWeights()
-	net.PropagateSample([]float64{0.3, 0.7}, []float64{0.9, 0.1})
+	net.Predict([]float64{0.3, 0.7})
 	net.Print()
 }

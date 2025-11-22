@@ -1,6 +1,25 @@
-package training
+package gonet
 
-import "math/rand/v2"
+import (
+	"encoding/csv"
+	"math/rand/v2"
+	"os"
+)
+
+type Sample struct {
+	X []float64 // input
+	Y []float64 // output
+}
+
+func ReadCSVDataSet(file string) ([][]string, error) {
+	f, err := os.Open(file)
+	if err != nil {
+		return nil, err
+	}
+	defer f.Close()
+	r := csv.NewReader(f)
+	return r.ReadAll()
+}
 
 func SplitDataSet[T any](samples []T) (training, validation, testing []T) {
 	var (
