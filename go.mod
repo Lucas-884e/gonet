@@ -1,6 +1,6 @@
 module github.com/Lucas-884e/gonet
 
-go 1.22.12
+go 1.25.4
 
 require github.com/stretchr/testify v1.11.1
 
