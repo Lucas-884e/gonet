@@ -8,9 +8,10 @@ import (
 
 func NewNode(v float64, name string) *Node {
 	return &Node{
-		name: name,
-		v:    v,
-		op:   OpNone,
+		name:   name,
+		v:      v,
+		isLeaf: true,
+		op:     OpNone,
 	}
 }
 
@@ -24,6 +25,7 @@ type Node struct {
 	name     string
 	v        float64 // value of current node
 	g        float64 // gradient: ∂(next_node)/∂(current_node)
+	isLeaf   bool    // Is current node a leaf node (ie, not a composite note generated from a few other nodes)
 	isInput  bool    // Is current node an input node (input values for neural network input layer)?
 	op       Operator
 	prev     []*Node // previous node
@@ -36,6 +38,10 @@ func (n *Node) Name() string {
 
 func (n *Node) V() float64 {
 	return n.v
+}
+
+func (n *Node) G() float64 {
+	return n.g
 }
 
 func (n *Node) Backward() {
@@ -67,7 +73,9 @@ func (n *Node) Backward() {
 	// in reverse topological order. Therefore, we should call their backward
 	// function in reverse order.
 	for i := len(sorted) - 1; i >= 0; i-- {
-		sorted[i].backward()
+		if sn := sorted[i]; !sn.isLeaf {
+			sn.backward()
+		}
 	}
 }
 
@@ -112,7 +120,6 @@ func Multiply(ns ...*Node) *Node {
 	)
 	for i, n := range ns {
 		names = append(names, n.name)
-		v *= n.v
 		for j := 0; j <= i; j++ {
 			if j == i {
 				localG[j] = v
@@ -120,6 +127,7 @@ func Multiply(ns ...*Node) *Node {
 				localG[j] *= n.v
 			}
 		}
+		v *= n.v
 	}
 	out := &Node{
 		name: strings.Join(names, "×"),
@@ -200,7 +208,7 @@ func Softmax(t float64, ns ...*Node) (outs []*Node) {
 
 	for i, y := range ys {
 		outs = append(outs, &Node{
-			name: fmt.Sprintf("softmax[%d](%g)", i, t),
+			name: fmt.Sprintf("softmax[index=%d](T=%g)", i, t),
 			v:    y,
 			op:   OpSoftmax,
 			prev: ns,
@@ -226,12 +234,12 @@ func Softmax(t float64, ns ...*Node) (outs []*Node) {
 // meaningless, so the returned node does not contain a valid `Node.v`, it only
 // has `Node.backward` and `Node.prev` assigned for backward propagation.
 func CrossEntropy(observed int, predicted ...*Node) *Node {
-	if len(ns) < 2 {
+	if len(predicted) < 2 {
 		panic("cross-entropy loss function must have at least two predicted nodes")
 	}
 
 	out := &Node{
-		name: fmt.Sprintf("cross_entropy[%d]", observed),
+		name: fmt.Sprintf("cross_entropy[observed=%d]", observed),
 		prev: predicted,
 	}
 	out.backward = func() {
