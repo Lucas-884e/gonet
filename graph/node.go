@@ -233,9 +233,9 @@ func Softmax(t float64, ns ...*Node) (outs []*Node) {
 // in the data sample. Note, calculating the concrete value of cross-entropy is
 // meaningless, so the returned node does not contain a valid `Node.v`, it only
 // has `Node.backward` and `Node.prev` assigned for backward propagation.
-func CrossEntropy(observed int, predicted ...*Node) *Node {
+func CrossEntropyLoss(observed int, predicted ...*Node) *Node {
 	if len(predicted) < 2 {
-		panic("cross-entropy loss function must have at least two predicted nodes")
+		panic("Cross-Entropy loss function must have at least two predicted nodes")
 	}
 
 	out := &Node{
@@ -245,6 +245,43 @@ func CrossEntropy(observed int, predicted ...*Node) *Node {
 	out.backward = func() {
 		n := predicted[observed]
 		n.g -= out.g / n.v
+	}
+	return out
+}
+
+// Residual Sum of Squared (RSS) or Sum of Squared Errors (SSE).
+func ResidualSumSquaredLoss(actual []float64, predicted []*Node) *Node {
+	if len(predicted) != len(actual) {
+		panic("Residual-Sum-of-Squared loss function must receive the same number of predicted values and actual values")
+	}
+
+	out := &Node{
+		name: fmt.Sprintf("RSS[count=%d]", len(actual)),
+		prev: predicted,
+	}
+	out.backward = func() {
+		for i, n := range predicted {
+			n.g += n.v - actual[i]
+		}
+	}
+	return out
+}
+
+func MaxMarginLoss(actual []float64, predicted []*Node) *Node {
+	if len(predicted) != len(actual) {
+		panic("Max-Margin loss function must receive the same number of predicted values and actual values")
+	}
+
+	out := &Node{
+		name: fmt.Sprintf("MaxMargin[count=%d]", len(actual)),
+		prev: predicted,
+	}
+	out.backward = func() {
+		for i, n := range predicted {
+			if d := actual[i]; d*n.v < 1 {
+				n.g -= d
+			}
+		}
 	}
 	return out
 }
