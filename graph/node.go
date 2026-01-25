@@ -53,9 +53,36 @@ func (n *Node) Backward() {
 		return
 	}
 
+	sorted := n.topologicalSort()
+	n.g = 1
+
+	// We appended current node after sorting previous nodes, so the `sorted` is
+	// in reverse topological order. Therefore, we should call their backward
+	// function in reverse order.
+	for i := len(sorted) - 1; i >= 0; i-- {
+		if sn := sorted[i]; !sn.isLeaf {
+			sn.backward()
+		}
+	}
+}
+
+func (n *Node) String() string {
+	var (
+		sorted = n.topologicalSort()
+		sb     strings.Builder
+	)
+	for _, sn := range sorted {
+		sb.WriteString(sn.name)
+		sb.WriteString(fmt.Sprintf(" | value=%.6g", sn.v))
+		sb.WriteString(fmt.Sprintf(" | gradient=%.6g", sn.g))
+		sb.WriteByte('\n')
+	}
+	return sb.String()
+}
+
+func (n *Node) topologicalSort() (sorted []*Node) {
 	var (
 		sort    func(*Node)
-		sorted  []*Node
 		visited = make(map[*Node]bool)
 	)
 	sort = func(curr *Node) {
@@ -71,16 +98,7 @@ func (n *Node) Backward() {
 		}
 	}
 	sort(n)
-
-	n.g = 1
-	// We appended current node after sorting previous nodes, so the `sorted` is
-	// in reverse topological order. Therefore, we should call their backward
-	// function in reverse order.
-	for i := len(sorted) - 1; i >= 0; i-- {
-		if sn := sorted[i]; !sn.isLeaf {
-			sn.backward()
-		}
-	}
+	return sorted
 }
 
 func Plus(ns ...*Node) *Node {
@@ -123,7 +141,11 @@ func Multiply(ns ...*Node) *Node {
 		localG = make([]float64, len(ns))
 	)
 	for i, n := range ns {
-		names = append(names, n.name)
+		if n.op == OpPlus {
+			names = append(names, "("+n.name+")")
+		} else {
+			names = append(names, n.name)
+		}
 		for j := 0; j <= i; j++ {
 			if j == i {
 				localG[j] = v

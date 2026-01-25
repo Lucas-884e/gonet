@@ -18,15 +18,33 @@ func ModelLossFunc(model FeedForwarder, lf LossFunction) func([]util.Sample) *No
 		for _, s := range samples {
 			losses = append(losses, lf(s.Y, model.Feed(s.X)))
 		}
-		return BatchLoss(losses)
+		return BatchLoss(losses...)
 	}
 }
 
-func BatchLoss(losses []*Node) *Node {
+func BatchLoss(losses ...*Node) *Node {
 	if len(losses) == 1 {
 		return losses[0]
 	}
 	return Multiply(Plus(losses...), NewNode(1/float64(len(losses)), "mean"))
+}
+
+// Residual Sum of Squared (RSS) or Sum of Squared Errors (SSE).
+func ResidualSumSquaredLoss(actual []float64, predicted []*Node) *Node {
+	if len(predicted) != len(actual) {
+		panic("Residual-Sum-of-Squared loss function must receive the same number of predicted values and actual values")
+	}
+
+	out := &Node{
+		name: fmt.Sprintf("RSS[count=%d]", len(actual)),
+		prev: predicted,
+	}
+	out.backward = func() {
+		for i, n := range predicted {
+			n.g += (n.v - actual[i]) * out.g
+		}
+	}
+	return out
 }
 
 // CrossEntropyLoss defines the cross-entropy loss function. `actual` represents
@@ -60,24 +78,6 @@ func CrossEntropyLoss(actual []float64, predicted []*Node) *Node {
 	return out
 }
 
-// Residual Sum of Squared (RSS) or Sum of Squared Errors (SSE).
-func ResidualSumSquaredLoss(actual []float64, predicted []*Node) *Node {
-	if len(predicted) != len(actual) {
-		panic("Residual-Sum-of-Squared loss function must receive the same number of predicted values and actual values")
-	}
-
-	out := &Node{
-		name: fmt.Sprintf("RSS[count=%d]", len(actual)),
-		prev: predicted,
-	}
-	out.backward = func() {
-		for i, n := range predicted {
-			n.g += n.v - actual[i]
-		}
-	}
-	return out
-}
-
 func MaxMarginLoss(actual []float64, predicted []*Node) *Node {
 	if len(predicted) != len(actual) {
 		panic("Max-Margin loss function must receive the same number of predicted values and actual values")
@@ -90,7 +90,7 @@ func MaxMarginLoss(actual []float64, predicted []*Node) *Node {
 	out.backward = func() {
 		for i, n := range predicted {
 			if d := actual[i]; d*n.v < 1 {
-				n.g -= d
+				n.g -= d * out.g
 			}
 		}
 	}
