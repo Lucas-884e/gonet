@@ -75,7 +75,8 @@ func TestNode(t *testing.T) {
 	assert.InDelta(t, 0.5327843137197291, z2.V(), eps)
 	assert.Equal(t, "softmax[index=1](T=2)", z2.Name())
 
-	ce := CrossEntropyLoss(0, z1, z2) // The 0-th element is observed.
+	// The 0-th element is observed.
+	ce := CrossEntropyLoss([]float64{1, 0}, zs)
 	ce.Backward()
 
 	// Now verify all gradients.

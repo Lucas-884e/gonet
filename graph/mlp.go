@@ -8,9 +8,9 @@ import (
 )
 
 type Neuron struct {
-	lidx    int // layer index
-	nidx    int // neuron index in the layer
-	weights []*Node
+	lidx    int     // layer index
+	nidx    int     // neuron index in the layer
+	weights []*Node // first node is bias
 }
 
 func NewNeuron(inputSize, lidx, nidx int) *Neuron {
@@ -60,6 +60,16 @@ func (n *Neuron) LoadWeights(ws []float64) {
 	}
 }
 
+func (n *Neuron) ZeroG() {
+	for _, w := range n.weights {
+		w.g = 0
+	}
+}
+
+func (n *Neuron) W() []*Node {
+	return n.weights
+}
+
 type Layer struct {
 	lidx      int // layer index
 	neurons   []*Neuron
@@ -93,6 +103,16 @@ func (l *Layer) LoadWeights(ws [][]float64) {
 	for i, n := range l.neurons {
 		n.LoadWeights(ws[i])
 	}
+}
+
+func (l *Layer) ZeroG() {
+	for _, n := range l.neurons {
+		n.ZeroG()
+	}
+}
+
+func (l *Layer) N() []*Neuron {
+	return l.neurons
 }
 
 // MLP defines a Multi-Layer Perceptron
@@ -135,4 +155,14 @@ func (mlp *MLP) LoadWeights(ws [][][]float64) {
 	for i, l := range mlp.layers {
 		l.LoadWeights(ws[i])
 	}
+}
+
+func (mlp *MLP) ZeroG() {
+	for _, l := range mlp.layers {
+		l.ZeroG()
+	}
+}
+
+func (mlp *MLP) L() []*Layer {
+	return mlp.layers
 }
