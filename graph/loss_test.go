@@ -58,7 +58,6 @@ func TestModelLossFunc(t *testing.T) {
 	)
 
 	loss.Backward()
-	fmt.Println(loss)
 	g := ((2*1-2.1)*1 + (2*0.5-0.9)*0.5 + (2*(-0.7)-(-1.5))*(-0.7)) / 3
 	assert.InDelta(t, g, w.G(), 1e-10)
 

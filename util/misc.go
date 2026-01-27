@@ -1,4 +1,4 @@
-package gonet
+package util
 
 import (
 	"encoding/csv"
@@ -9,6 +9,19 @@ import (
 type Sample struct {
 	X []float64 // input
 	Y []float64 // output
+}
+
+type TrainConfig struct {
+	BatchSize    int
+	Epochs       int
+	StopEps      float64
+	LearningRate float64
+}
+
+type IsCorrectFunc func(pred, actual []float64) bool
+
+func RandomUniformSample(min, max float64) float64 {
+	return min + rand.Float64()*(max-min)
 }
 
 func ReadCSVDataSet(file string) ([][]string, error) {
@@ -34,4 +47,11 @@ func ShuffleSamples[T any](samples []T) {
 	rand.Shuffle(len(samples), func(i, j int) {
 		samples[i], samples[j] = samples[j], samples[i]
 	})
+}
+
+// AnnealingLearningRate returns an annealed learning rate by the following formula:
+//
+//	η = η_0 / (1 + decay * epoch)
+func AnnealingLearningRate(eta0, decay float64, epoch int) float64 {
+	return eta0 / (1 + decay*float64(epoch))
 }

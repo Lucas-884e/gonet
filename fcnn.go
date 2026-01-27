@@ -163,7 +163,7 @@ func (net *FCNNet) backwardPropagate() {
 }
 
 // PropagateSamples propagates with one training sample to tune the weights.
-func (net *FCNNet) PropagateSamples(samples []Sample) {
+func (net *FCNNet) PropagateSamples(samples []util.Sample) {
 	net.ZeroGrads()
 	for _, sample := range samples {
 		net.feedInputSample(sample.X, sample.Y)
@@ -222,4 +222,5 @@ func (net *FCNNet) Print() {
 			}
 		}
 	}
+	fmt.Println()
 }

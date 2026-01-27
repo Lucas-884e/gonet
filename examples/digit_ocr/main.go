@@ -7,6 +7,7 @@ import (
 	"strconv"
 
 	"github.com/Lucas-884e/gonet"
+	"github.com/Lucas-884e/gonet/util"
 )
 
 var (
@@ -17,14 +18,14 @@ func main() {
 	flag.Parse()
 
 	var (
-		trainingSet   []gonet.Sample
-		validationSet []gonet.Sample
-		testSet       []gonet.Sample
+		trainingSet   []util.Sample
+		validationSet []util.Sample
+		testSet       []util.Sample
 	)
 
 	switch *dataset {
 	case "sklearn":
-		records, err := gonet.ReadCSVDataSet("data/sklearn/digits.csv")
+		records, err := util.ReadCSVDataSet("data/sklearn/digits.csv")
 		if err != nil {
 			log.Fatal(err)
 		}
@@ -33,11 +34,11 @@ func main() {
 			log.Fatal(err)
 		}
 
-		gonet.ShuffleSamples(samples)
-		trainingSet, validationSet, testSet = gonet.SplitDataSet(samples)
+		util.ShuffleSamples(samples)
+		trainingSet, validationSet, testSet = util.SplitDataSet(samples)
 
 	case "mnist":
-		trainingRecords, err := gonet.ReadCSVDataSet("data/mnist/training_data.csv")
+		trainingRecords, err := util.ReadCSVDataSet("data/mnist/training_data.csv")
 		if err != nil {
 			log.Fatal(err)
 		}
@@ -46,7 +47,7 @@ func main() {
 			log.Fatal(err)
 		}
 
-		validationRecords, err := gonet.ReadCSVDataSet("data/mnist/validation_data.csv")
+		validationRecords, err := util.ReadCSVDataSet("data/mnist/validation_data.csv")
 		if err != nil {
 			log.Fatal(err)
 		}
@@ -55,7 +56,7 @@ func main() {
 			log.Fatal(err)
 		}
 
-		testRecords, err := gonet.ReadCSVDataSet("data/mnist/test_data.csv")
+		testRecords, err := util.ReadCSVDataSet("data/mnist/test_data.csv")
 		if err != nil {
 			log.Fatal(err)
 		}
@@ -70,7 +71,7 @@ func main() {
 	log.Printf("(Before training) Prediction precision: validation set = %g | testing set = %g",
 		tr.PredictionPrecision(validationSet), tr.PredictionPrecision(testSet))
 
-	tr.Train(gonet.TrainConfig{
+	tr.Train(util.TrainConfig{
 		BatchSize:    1,
 		Epochs:       30,
 		StopEps:      0,
@@ -106,13 +107,13 @@ func isCorrect(pred, actual []float64) bool {
 	return findPrediction(pred) == findPrediction(actual)
 }
 
-func recordsToTrainingSamples(records [][]string) (samples []gonet.Sample, err error) {
+func recordsToTrainingSamples(records [][]string) (samples []util.Sample, err error) {
 	for i, record := range records {
 		X, Y, err := recordToFloats(record)
 		if err != nil {
 			return nil, fmt.Errorf("convert %d-th sample %v: %v", i, record, err)
 		}
-		samples = append(samples, gonet.Sample{X: X, Y: Y})
+		samples = append(samples, util.Sample{X: X, Y: Y})
 	}
 	return samples, nil
 }
