@@ -36,3 +36,6 @@ func nonGraphTrain(trainingSet, validationSet, testSet []util.Sample) {
 	nn.Print()
 	log.Println("(After training) Test set prediction precision:", tr.PredictionPrecision(testSet))
 }
+
+func graphTrain(trainingSet, validationSet, testSet []util.Sample) {
+}
