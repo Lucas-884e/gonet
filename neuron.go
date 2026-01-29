@@ -46,6 +46,12 @@ func (n *Neuron) zeroWeightGrads() {
 	}
 }
 
+func (n *Neuron) loadWeights(weights []float64) {
+	for i := range n.weights {
+		n.weights[i].v = weights[i]
+	}
+}
+
 func (n *Neuron) updateWeights(eta float64) float64 {
 	var delta float64
 	for k, w := range n.weights {

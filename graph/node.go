@@ -21,6 +21,14 @@ func NewInputNode(v float64, name string) *Node {
 	return n
 }
 
+func NodeValues(ns []*Node) []float64 {
+	vs := make([]float64, len(ns))
+	for i, n := range ns {
+		vs[i] = n.v
+	}
+	return vs
+}
+
 type Node struct {
 	name     string
 	v        float64 // value of current node
@@ -44,8 +52,9 @@ func (n *Node) G() float64 {
 	return n.g
 }
 
-func (n *Node) Learn(rate float64) {
+func (n *Node) Learn(rate float64) float64 {
 	n.v -= rate * n.g
+	return n.g * n.g
 }
 
 func (n *Node) Backward() {
@@ -71,6 +80,7 @@ func (n *Node) String() string {
 		sorted = n.topologicalSort()
 		sb     strings.Builder
 	)
+	sb.WriteByte('\n')
 	for _, sn := range sorted {
 		sb.WriteString(sn.name)
 		sb.WriteString(fmt.Sprintf(" | value=%.6g", sn.v))

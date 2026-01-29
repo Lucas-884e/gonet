@@ -21,6 +21,15 @@ func (l *Layer) zeroWeightGrads() {
 	}
 }
 
+func (l *Layer) loadWeights(weights [][]float64) {
+	for i, n := range l.neurons {
+		if i == 0 {
+			continue
+		}
+		n.loadWeights(weights[i-1])
+	}
+}
+
 func (l *Layer) normalizeGrads(sampleCount int) {
 	for i := 1; i <= l.size; i++ {
 		n := l.neurons[i]

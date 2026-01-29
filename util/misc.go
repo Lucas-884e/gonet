@@ -2,6 +2,7 @@ package util
 
 import (
 	"encoding/csv"
+	"math"
 	"math/rand/v2"
 	"os"
 )
@@ -22,6 +23,23 @@ type IsCorrectFunc func(pred, actual []float64) bool
 
 func RandomUniformSample(min, max float64) float64 {
 	return min + rand.Float64()*(max-min)
+}
+
+func GenerateRandomLayerWeights(numNeurons, weightsPerNeuron int) [][]float64 {
+	var (
+		// Uniform random distribution in the range: [-sqrt(3/m), sqrt(3/m)],
+		// where `m` is the number of synaptic connections of neuron `n`.
+		max     = math.Sqrt(3 / float64(weightsPerNeuron))
+		weights = make([][]float64, numNeurons)
+	)
+	for i := 0; i < numNeurons; i++ {
+		ws := make([]float64, weightsPerNeuron)
+		for j := 0; j < weightsPerNeuron; j++ {
+			ws[j] = RandomUniformSample(-max, max)
+		}
+		weights[i] = ws
+	}
+	return weights
 }
 
 func ReadCSVDataSet(file string) ([][]string, error) {

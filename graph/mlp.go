@@ -3,6 +3,7 @@ package graph
 import (
 	"fmt"
 	"math"
+	"strings"
 
 	"github.com/Lucas-884e/gonet/util"
 )
@@ -54,6 +55,13 @@ func (n *Neuron) Feed(input []*Node, activator Operator) *Node {
 	}
 }
 
+func (n *Neuron) Learn(rate float64) (delta float64) {
+	for _, w := range n.weights {
+		delta += w.Learn(rate)
+	}
+	return
+}
+
 func (n *Neuron) LoadWeights(ws []float64) {
 	for i, w := range n.weights {
 		w.v = ws[i]
@@ -68,6 +76,18 @@ func (n *Neuron) ZeroG() {
 
 func (n *Neuron) W() []*Node {
 	return n.weights
+}
+
+func (n *Neuron) String() string {
+	ws := make([]string, len(n.weights))
+	for i, w := range n.weights {
+		if i == 0 {
+			ws[0] = fmt.Sprintf("Bias=%g", w.V())
+		} else {
+			ws[i] = fmt.Sprintf("W[%d]=%g", i, w.V())
+		}
+	}
+	return strings.Join(ws, " | ")
 }
 
 type Layer struct {
@@ -97,6 +117,13 @@ func (l *Layer) Feed(input []*Node) []*Node {
 		return Softmax(1, out...)
 	}
 	return out
+}
+
+func (l *Layer) Learn(rate float64) (delta float64) {
+	for _, n := range l.neurons {
+		delta += n.Learn(rate)
+	}
+	return
 }
 
 func (l *Layer) LoadWeights(ws [][]float64) {
@@ -151,9 +178,23 @@ func (mlp *MLP) Feed(xs []float64) []*Node {
 	return output
 }
 
+func (mlp *MLP) Learn(rate float64) (delta float64) {
+	for _, l := range mlp.layers {
+		delta += l.Learn(rate)
+	}
+	return
+}
+
 func (mlp *MLP) LoadWeights(ws [][][]float64) {
 	for i, l := range mlp.layers {
 		l.LoadWeights(ws[i])
+	}
+}
+
+func (mlp *MLP) RandomizeInitialWeights() {
+	for _, l := range mlp.layers {
+		weights := util.GenerateRandomLayerWeights(len(l.neurons), len(l.neurons[0].weights))
+		l.LoadWeights(weights)
 	}
 }
 
@@ -165,4 +206,17 @@ func (mlp *MLP) ZeroG() {
 
 func (mlp *MLP) L() []*Layer {
 	return mlp.layers
+}
+
+// Print prints the network to the console.
+func (mlp *MLP) String() string {
+	w := new(strings.Builder)
+	fmt.Fprintf(w, "\n## Neural network (#input=%d | #output=%d | #layers=%d)\n", mlp.inputSize, mlp.outputSize, len(mlp.layers))
+	for _, l := range mlp.layers {
+		fmt.Fprintf(w, "--------------- Layer %d: %d neurons (activator: %s) ---------------\n", l.lidx, len(l.neurons), l.activator)
+		for _, n := range l.neurons {
+			fmt.Fprintf(w, "Neuron #%d:  %s\n", n.nidx, n.String())
+		}
+	}
+	return w.String()
 }

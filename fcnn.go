@@ -3,8 +3,6 @@ package gonet
 import (
 	"fmt"
 	"math"
-	"math/rand"
-	"time"
 
 	"github.com/Lucas-884e/gonet/util"
 )
@@ -77,22 +75,12 @@ func (net *FCNNet) AddLayerWithActivator(size int, activator Activator) {
 
 // RandomizeInitialWeights initialize the network weights to random values.
 func (net *FCNNet) RandomizeInitialWeights() {
-	rand.Seed(time.Now().Unix())
 	for i, layer := range net.layers {
 		if i == 0 {
 			continue
 		}
-		for j, n := range layer.neurons {
-			if j == 0 {
-				continue
-			}
-			max := math.Sqrt(3 / float64(len(n.weights)))
-			for k := range n.weights {
-				// Uniform random distribution in the range: [-sqrt(3/m), sqrt(3/m)],
-				// where `m` is the number of synaptic connections of neuron `n`.
-				n.weights[k].v = util.RandomUniformSample(-max, max)
-			}
-		}
+		weights := util.GenerateRandomLayerWeights(layer.size, net.layers[i-1].size+1)
+		layer.loadWeights(weights)
 	}
 }
 
@@ -168,6 +156,8 @@ func (net *FCNNet) PropagateSamples(samples []util.Sample) {
 	for _, sample := range samples {
 		net.feedInputSample(sample.X, sample.Y)
 		net.forwardPropagate()
+		// TODO(lucas): need fix. Should not do backward propagration for every sample,
+		// otherwise batchSize > 1 training won't work.
 		net.backwardPropagate()
 	}
 

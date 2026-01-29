@@ -1,13 +1,15 @@
 package main
 
 import (
+	"fmt"
 	"log"
 
 	"github.com/Lucas-884e/gonet"
+	"github.com/Lucas-884e/gonet/graph"
 	"github.com/Lucas-884e/gonet/util"
 )
 
-func constructNetwork(hiddenLayerSizes ...int) *gonet.FCNNet {
+func constructNonGraphNetwork(hiddenLayerSizes ...int) *gonet.FCNNet {
 	// Must use Tanh activator because the training data has target values within range: [-1, 1]
 	nn := gonet.NewFCNNet(2, gonet.LossMaxMargin, gonet.ReluActivator())
 	for _, size := range hiddenLayerSizes {
@@ -19,7 +21,7 @@ func constructNetwork(hiddenLayerSizes ...int) *gonet.FCNNet {
 }
 
 func nonGraphTrain(trainingSet, validationSet, testSet []util.Sample) {
-	nn := constructNetwork(8)
+	nn := constructNonGraphNetwork(8)
 	tr := gonet.NewTrainer(nn, func(pred, actual []float64) bool {
 		return pred[0]*actual[0] > 0
 	})
@@ -37,5 +39,71 @@ func nonGraphTrain(trainingSet, validationSet, testSet []util.Sample) {
 	log.Println("(After training) Test set prediction precision:", tr.PredictionPrecision(testSet))
 }
 
+func constructGraphNetwork(hiddenLayerSizes ...int) *graph.MLP {
+	mlp := graph.NewMLP(2)
+	for _, size := range hiddenLayerSizes {
+		mlp.AddLayer(size, graph.OpRelu)
+	}
+	mlp.AddLayer(1, graph.OpNone)
+	mlp.RandomizeInitialWeights()
+	return mlp
+}
+
 func graphTrain(trainingSet, validationSet, testSet []util.Sample) {
+	var (
+		mlp       = constructGraphNetwork(8)
+		lossFn    = graph.ModelLossFunc(mlp, graph.MaxMarginLoss)
+		isCorrect = func(pred, actual []float64) bool { return pred[0]*actual[0] > 0 }
+		tsSize    = len(trainingSet)
+		delta     float64
+	)
+
+	precision := PredictionPrecision(mlp, validationSet, isCorrect)
+	log.Printf("[Before training] Validation set prediction precision: %g", precision)
+
+	cfg := util.TrainConfig{
+		BatchSize:    5,
+		Epochs:       20,
+		StopEps:      0,
+		LearningRate: 0.1,
+	}
+
+train:
+	for ep := 0; ep < cfg.Epochs; ep++ {
+		// Shuffle before each epoch.
+		util.ShuffleSamples(trainingSet)
+		for start := 0; start < tsSize; start += cfg.BatchSize {
+			end := start + cfg.BatchSize
+			if end > tsSize {
+				end = tsSize
+			}
+
+			mlp.ZeroG()
+			loss := lossFn(trainingSet[start:end])
+			loss.Backward()
+
+			learningRate := util.AnnealingLearningRate(cfg.LearningRate, 1, ep)
+			if delta = mlp.Learn(learningRate); delta < cfg.StopEps {
+				log.Printf("* Reached stopping criterion (delta = %g < %g).", delta, cfg.StopEps)
+				break train
+			}
+		}
+
+		if ep%5 == 0 || ep+1 == cfg.Epochs {
+			precision := PredictionPrecision(mlp, validationSet, isCorrect)
+			log.Printf("[Epoch %d] Validation set prediction precision (delta=%g): %g", ep+1, delta, precision)
+		}
+	}
+
+	fmt.Println(mlp)
+}
+
+func PredictionPrecision(model *graph.MLP, dataset []util.Sample, isCorrect util.IsCorrectFunc) float32 {
+	var correctCount int
+	for _, sample := range dataset {
+		if isCorrect(graph.NodeValues(model.Feed(sample.X)), sample.Y) {
+			correctCount++
+		}
+	}
+	return float32(correctCount) / float32(len(dataset))
 }
