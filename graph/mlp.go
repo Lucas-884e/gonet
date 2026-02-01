@@ -68,12 +68,6 @@ func (n *Neuron) LoadWeights(ws []float64) {
 	}
 }
 
-func (n *Neuron) ZeroG() {
-	for _, w := range n.weights {
-		w.g = 0
-	}
-}
-
 func (n *Neuron) W() []*Node {
 	return n.weights
 }
@@ -132,12 +126,6 @@ func (l *Layer) LoadWeights(ws [][]float64) {
 	}
 }
 
-func (l *Layer) ZeroG() {
-	for _, n := range l.neurons {
-		n.ZeroG()
-	}
-}
-
 func (l *Layer) N() []*Neuron {
 	return l.neurons
 }
@@ -166,12 +154,8 @@ func (mlp *MLP) AddLayer(outputSize int, activator Operator) {
 	mlp.outputSize = outputSize
 }
 
-func (mlp *MLP) Feed(xs []float64) []*Node {
-	var output []*Node
-	for i, x := range xs {
-		xn := NewInputNode(x, fmt.Sprintf("X_%d", i+1))
-		output = append(output, xn)
-	}
+func (mlp *MLP) Feed(input []*Node) []*Node {
+	output := input
 	for _, l := range mlp.layers {
 		output = l.Feed(output)
 	}
@@ -195,12 +179,6 @@ func (mlp *MLP) RandomizeInitialWeights() {
 	for _, l := range mlp.layers {
 		weights := util.GenerateRandomLayerWeights(len(l.neurons), len(l.neurons[0].weights))
 		l.LoadWeights(weights)
-	}
-}
-
-func (mlp *MLP) ZeroG() {
-	for _, l := range mlp.layers {
-		l.ZeroG()
 	}
 }
 

@@ -6,14 +6,64 @@ import (
 	"github.com/Lucas-884e/gonet/util"
 )
 
-type LossFunction func(actual []float64, predicted []*Node) *Node
+type LossFunction func(actual, predicted []*Node) *Node
 
 type FeedForwarder interface {
-	Feed([]float64) []*Node
+	Feed([]*Node) []*Node
 }
 
-func ModelLossFunc(model FeedForwarder, lf LossFunction) func([]util.Sample) *Node {
-	return func(samples []util.Sample) *Node {
+type Sample struct {
+	X []*Node
+	Y []*Node
+}
+
+func NewSample(inputSize, outputSize int) *Sample {
+	s := &Sample{
+		X: make([]*Node, inputSize),
+		Y: make([]*Node, outputSize),
+	}
+	for i := range s.X {
+		s.X[i] = NewInputNode(0, fmt.Sprintf("X_%d", i+1))
+	}
+	for i := range s.Y {
+		s.Y[i] = NewInputNode(0, fmt.Sprintf("Y_%d", i+1))
+	}
+	return s
+}
+
+func FromSample(us util.Sample) *Sample {
+	s := NewSample(len(us.X), len(us.Y))
+	s.Update(us)
+	return s
+}
+
+func (s *Sample) Update(us util.Sample) {
+	for i, n := range s.X {
+		n.v = us.X[i]
+	}
+	for i, n := range s.Y {
+		n.v = us.Y[i]
+	}
+}
+
+type SampleBatch []*Sample
+
+func NewSampleBatch(inputSize, outputSize, batchSize int) SampleBatch {
+	sb := make(SampleBatch, batchSize)
+	for i := 0; i < batchSize; i++ {
+		sb[i] = NewSample(inputSize, outputSize)
+	}
+	return sb
+}
+
+func (sb SampleBatch) Update(samples []util.Sample) {
+	for i, s := range samples {
+		sb[i].Update(s)
+	}
+}
+
+func ModelLossFunc(model FeedForwarder, lf LossFunction) func([]*Sample) *Node {
+	return func(samples []*Sample) *Node {
 		var losses []*Node
 		for _, s := range samples {
 			losses = append(losses, lf(s.Y, model.Feed(s.X)))
@@ -30,7 +80,7 @@ func BatchLoss(losses ...*Node) *Node {
 }
 
 // Residual Sum of Squared (RSS) or Sum of Squared Errors (SSE).
-func ResidualSumSquaredLoss(actual []float64, predicted []*Node) *Node {
+func ResidualSumSquaredLoss(actual, predicted []*Node) *Node {
 	if len(predicted) != len(actual) {
 		panic("Residual-Sum-of-Squared loss function must receive the same number of predicted values and actual values")
 	}
@@ -39,9 +89,16 @@ func ResidualSumSquaredLoss(actual []float64, predicted []*Node) *Node {
 		name: fmt.Sprintf("RSS[count=%d]", len(actual)),
 		prev: predicted,
 	}
+	out.forward = func() {
+		for _, n := range predicted {
+			if n.forward != nil {
+				n.forward()
+			}
+		}
+	}
 	out.backward = func() {
 		for i, n := range predicted {
-			n.g += (n.v - actual[i]) * out.g
+			n.g += (n.v - actual[i].v) * out.g
 		}
 	}
 	return out
@@ -54,43 +111,57 @@ func ResidualSumSquaredLoss(actual []float64, predicted []*Node) *Node {
 // Note, calculating the concrete value of cross-entropy is meaningless, so the
 // returned node does not contain a valid `Node.v`, it only has `Node.backward`
 // and `Node.prev` assigned for backward propagation.
-func CrossEntropyLoss(actual []float64, predicted []*Node) *Node {
-	if len(predicted) < 2 {
-		panic("Cross-Entropy loss function must have at least two predicted nodes")
-	}
-
-	var observed int
-	for idx, a := range actual {
-		if a > 0 {
-			observed = idx
-			break
-		}
+func CrossEntropyLoss(actual, predicted []*Node) *Node {
+	if len(predicted) != len(actual) {
+		panic(fmt.Sprintf("Cross-Entropy loss function must receive the same number of predicted values and actual values, got actual %v", actual))
 	}
 
 	out := &Node{
-		name: fmt.Sprintf("cross_entropy[observed=%d]", observed),
+		name: fmt.Sprintf("cross_entropy[count=%d]", len(actual)),
 		prev: predicted,
 	}
+	out.forward = func() {
+		for _, n := range predicted {
+			if n.forward != nil {
+				n.forward()
+			}
+		}
+	}
 	out.backward = func() {
+		var observed int
+		for idx, a := range actual {
+			if a.v > 0 {
+				observed = idx
+				break
+			}
+		}
+
 		n := predicted[observed]
 		n.g -= out.g / n.v
 	}
 	return out
 }
 
-func MaxMarginLoss(actual []float64, predicted []*Node) *Node {
+func MaxMarginLoss(actual, predicted []*Node) *Node {
 	if len(predicted) != len(actual) {
-		panic("Max-Margin loss function must receive the same number of predicted values and actual values")
+		panic(fmt.Sprintf("Max-Margin loss function must receive the same number of predicted values and actual values, got actual %v", actual))
 	}
 
 	out := &Node{
 		name: fmt.Sprintf("MaxMargin[count=%d]", len(actual)),
 		prev: predicted,
 	}
+	out.forward = func() {
+		for _, n := range predicted {
+			if n.forward != nil {
+				n.forward()
+			}
+		}
+	}
 	out.backward = func() {
 		for i, n := range predicted {
-			if d := actual[i]; d*n.v < 1 {
-				n.g -= d * out.g
+			if d := actual[i]; d.v*n.v < 1 {
+				n.g -= d.v * out.g
 			}
 		}
 	}

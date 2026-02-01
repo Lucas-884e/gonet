@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log"
 	"strconv"
+	"time"
 
 	"github.com/Lucas-884e/gonet/util"
 )
@@ -34,7 +35,10 @@ func main() {
 	if *useGraph {
 		train = graphTrain
 	}
+
+	start := time.Now()
 	train(trainingSet, validationSet, testSet)
+	fmt.Println("\nTraining time cost:", time.Since(start))
 }
 
 func normalizeTrainingSamplesByRemovingMeans(samples []util.Sample) (means []float64) {

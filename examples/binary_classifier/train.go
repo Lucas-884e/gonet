@@ -45,7 +45,6 @@ func constructGraphNetwork(hiddenLayerSizes ...int) *graph.MLP {
 		mlp.AddLayer(size, graph.OpRelu)
 	}
 	mlp.AddLayer(1, graph.OpNone)
-	mlp.RandomizeInitialWeights()
 	return mlp
 }
 
@@ -61,13 +60,16 @@ func graphTrain(trainingSet, validationSet, testSet []util.Sample) {
 	precision := PredictionPrecision(mlp, validationSet, isCorrect)
 	log.Printf("[Before training] Validation set prediction precision: %g", precision)
 
-	cfg := util.TrainConfig{
-		BatchSize:    5,
-		Epochs:       20,
-		StopEps:      0,
-		LearningRate: 0.1,
-	}
-
+	var (
+		cfg = util.TrainConfig{
+			BatchSize:    5,
+			Epochs:       20,
+			StopEps:      0,
+			LearningRate: 0.1,
+		}
+		batchInput = graph.NewSampleBatch(2, 1, cfg.BatchSize)
+		loss       = lossFn(batchInput)
+	)
 train:
 	for ep := 0; ep < cfg.Epochs; ep++ {
 		// Shuffle before each epoch.
@@ -75,11 +77,10 @@ train:
 		for start := 0; start < tsSize; start += cfg.BatchSize {
 			end := start + cfg.BatchSize
 			if end > tsSize {
-				end = tsSize
+				break
 			}
 
-			mlp.ZeroG()
-			loss := lossFn(trainingSet[start:end])
+			batchInput.Update(trainingSet[start:end])
 			loss.Backward()
 
 			learningRate := util.AnnealingLearningRate(cfg.LearningRate, 1, ep)
@@ -99,9 +100,20 @@ train:
 }
 
 func PredictionPrecision(model *graph.MLP, dataset []util.Sample, isCorrect util.IsCorrectFunc) float32 {
-	var correctCount int
+	var (
+		correctCount int
+		input        = []*graph.Node{
+			graph.NewInputNode(0, "X1"),
+			graph.NewInputNode(0, "X2"),
+		}
+		predicted = model.Feed(input)
+	)
 	for _, sample := range dataset {
-		if isCorrect(graph.NodeValues(model.Feed(sample.X)), sample.Y) {
+		for i, x := range sample.X {
+			input[i].SetV(x)
+		}
+		predicted[0].Forward()
+		if isCorrect(graph.NodeValues(predicted), sample.Y) {
 			correctCount++
 		}
 	}

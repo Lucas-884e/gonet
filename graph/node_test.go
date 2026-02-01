@@ -33,17 +33,7 @@ func TestNode(t *testing.T) {
 		ksi22 = Multiply(w22, x2)      // 0
 		ksi2  = Plus(b2, ksi21, ksi22) // 4.5
 		y2    = Sigmoid(ksi2)
-	)
-	assert.Equal(t, -2.5, ksi11.V())
-	assert.Equal(t, "w11×x1", ksi11.Name())
-	assert.Equal(t, -1.5, ksi1.V())
-	assert.Equal(t, "b1+w11×x1+w12×x2", ksi1.Name())
-	assert.InDelta(t, 0.18242552380635635, y1.V(), eps)
-	assert.Equal(t, "σ(b1+w11×x1+w12×x2)", y1.Name())
-	assert.InDelta(t, 0.9890130573694068, y2.V(), eps)
-	assert.Equal(t, "σ(b2+w21×x1+w22×x2)", y2.Name())
 
-	var (
 		c1  = NewNode(0, "c1") // bias
 		u11 = NewNode(-0.5, "u11")
 		u12 = NewNode(1, "u12")
@@ -59,25 +49,37 @@ func TestNode(t *testing.T) {
 		eta21 = Multiply(u21, y1)
 		eta22 = Multiply(u22, y2)
 		eta2  = Plus(c2, eta21, eta22)
+
+		zs = Softmax(2, eta1, eta2)
+		z1 = zs[0]
+		z2 = zs[1]
+
+		// The 0-th element is observed.
+		ce = CrossEntropyLoss([]*Node{
+			NewInputNode(1, "actual1"),
+			NewInputNode(0, "actual2"),
+		}, zs)
 	)
+	ce.Backward()
+
+	assert.Equal(t, -2.5, ksi11.V())
+	assert.Equal(t, "w11×x1", ksi11.Name())
+	assert.Equal(t, -1.5, ksi1.V())
+	assert.Equal(t, "b1+w11×x1+w12×x2", ksi1.Name())
+	assert.InDelta(t, 0.18242552380635635, y1.V(), eps)
+	assert.Equal(t, "σ(b1+w11×x1+w12×x2)", y1.Name())
+	assert.InDelta(t, 0.9890130573694068, y2.V(), eps)
+	assert.Equal(t, "σ(b2+w21×x1+w22×x2)", y2.Name())
+
 	assert.InDelta(t, 0.8978002954662286, eta1.V(), eps)
 	assert.Equal(t, "c1+u11×σ(b1+w11×x1+w12×x2)+u12×σ(b2+w21×x1+w22×x2)", eta1.Name())
 	assert.InDelta(t, 1.16045163854517, eta2.V(), eps)
 	assert.Equal(t, "c2+u21×σ(b1+w11×x1+w12×x2)+u22×σ(b2+w21×x1+w22×x2)", eta2.Name())
 
-	var (
-		zs = Softmax(2, eta1, eta2)
-		z1 = zs[0]
-		z2 = zs[1]
-	)
 	assert.InDelta(t, 0.4672156862802709, z1.V(), eps)
 	assert.Equal(t, "softmax[index=0](T=2)", z1.Name())
 	assert.InDelta(t, 0.5327843137197291, z2.V(), eps)
 	assert.Equal(t, "softmax[index=1](T=2)", z2.Name())
-
-	// The 0-th element is observed.
-	ce := CrossEntropyLoss([]float64{1, 0}, zs)
-	ce.Backward()
 
 	// Now verify all gradients.
 
@@ -125,6 +127,7 @@ func TestMultiply(t *testing.T) {
 		d = NewNode(7, "x1")
 		p = Multiply(a, b, c, d)
 	)
+	p.Forward()
 	assert.EqualValues(t, 210, p.V())
 
 	p.Backward()

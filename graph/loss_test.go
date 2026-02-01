@@ -17,10 +17,10 @@ func TestBatchLoss(t *testing.T) {
 
 	assert.Equal(t, a, BatchLoss(a))
 
+	z.Backward()
 	assert.EqualValues(t, 1.5, z.V())
 	assert.Equal(t, "(a+b)×mean", z.Name())
 
-	z.Backward()
 	assert.EqualValues(t, 1, z.G())
 
 	sum := z.prev[0]
@@ -40,16 +40,17 @@ func newMockModel(w float64) *mockModel {
 	return &mockModel{w: NewNode(w, "W")}
 }
 
-func (m *mockModel) Feed(x []float64) []*Node {
-	return []*Node{Multiply(m.w, NewInputNode(x[0], fmt.Sprintf("X(%.3g)", x[0])))}
+func (m *mockModel) Feed(input []*Node) []*Node {
+	input[0].SetName(fmt.Sprintf("X(%.3g)", input[0].V()))
+	return []*Node{Multiply(m.w, input[0])}
 }
 
 func TestModelLossFunc(t *testing.T) {
 	var (
-		samples = []util.Sample{
-			{X: []float64{1}, Y: []float64{2.1}},
-			{X: []float64{0.5}, Y: []float64{0.9}},
-			{X: []float64{-0.7}, Y: []float64{-1.5}},
+		samples = []*Sample{
+			FromSample(util.Sample{X: []float64{1}, Y: []float64{2.1}}),
+			FromSample(util.Sample{X: []float64{0.5}, Y: []float64{0.9}}),
+			FromSample(util.Sample{X: []float64{-0.7}, Y: []float64{-1.5}}),
 		}
 		model  = newMockModel(2)
 		lossFn = ModelLossFunc(model, ResidualSumSquaredLoss)

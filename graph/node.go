@@ -30,18 +30,29 @@ func NodeValues(ns []*Node) []float64 {
 }
 
 type Node struct {
-	name     string
-	v        float64 // value of current node
+	name    string
+	isLeaf  bool // Is current node a leaf node (ie, not a composite note generated from a few other nodes)
+	isInput bool // Is current node an input node (input values for neural network input layer)?
+	op      Operator
+	prev    []*Node // previous node
+
+	v       float64 // value of current node, computed with `forward`
+	forward func()
+
 	g        float64 // gradient: ∂(next_node)/∂(current_node)
-	isLeaf   bool    // Is current node a leaf node (ie, not a composite note generated from a few other nodes)
-	isInput  bool    // Is current node an input node (input values for neural network input layer)?
-	op       Operator
-	prev     []*Node // previous node
 	backward func()  // backward propagation function for computing the gradient `g`
+}
+
+func (n *Node) SetName(name string) {
+	n.name = name
 }
 
 func (n *Node) Name() string {
 	return n.name
+}
+
+func (n *Node) SetV(v float64) {
+	n.v = v
 }
 
 func (n *Node) V() float64 {
@@ -57,12 +68,23 @@ func (n *Node) Learn(rate float64) float64 {
 	return n.g * n.g
 }
 
+func (n *Node) Forward() {
+	if n.forward != nil {
+		n.forward()
+	}
+}
+
 func (n *Node) Backward() {
 	if n.isInput {
 		return
 	}
 
+	n.Forward()
+
 	sorted := n.topologicalSort()
+	for _, sn := range sorted {
+		sn.g = 0
+	}
 	n.g = 1
 
 	// We appended current node after sorting previous nodes, so the `sorted` is
@@ -111,27 +133,32 @@ func (n *Node) topologicalSort() (sorted []*Node) {
 	return sorted
 }
 
-func Plus(ns ...*Node) *Node {
-	if len(ns) < 2 {
+func Plus(prev ...*Node) *Node {
+	if len(prev) < 2 {
 		panic("+ node must have at least two previous nodes")
 	}
 
-	var (
-		names []string
-		v     float64
-	)
-	for _, n := range ns {
+	var names []string
+	for _, n := range prev {
 		names = append(names, n.name)
-		v += n.v
 	}
 	out := &Node{
 		name: strings.Join(names, "+"),
-		v:    v,
 		op:   OpPlus,
-		prev: ns,
+		prev: prev,
+	}
+	out.forward = func() {
+		for _, n := range prev {
+			n.Forward()
+		}
+
+		out.v = 0
+		for _, n := range prev {
+			out.v += n.v
+		}
 	}
 	out.backward = func() {
-		for _, n := range ns {
+		for _, n := range prev {
 			if !n.isInput {
 				n.g += out.g
 			}
@@ -140,39 +167,46 @@ func Plus(ns ...*Node) *Node {
 	return out
 }
 
-func Multiply(ns ...*Node) *Node {
-	if len(ns) < 2 {
+func Multiply(prev ...*Node) *Node {
+	if len(prev) < 2 {
 		panic("× node must have at least two previous nodes")
 	}
 
 	var (
 		names  []string
-		v      = 1.0
-		localG = make([]float64, len(ns))
+		localG = make([]float64, len(prev))
 	)
-	for i, n := range ns {
+	for _, n := range prev {
 		if n.op == OpPlus {
 			names = append(names, "("+n.name+")")
 		} else {
 			names = append(names, n.name)
 		}
-		for j := 0; j <= i; j++ {
-			if j == i {
-				localG[j] = v
-			} else {
-				localG[j] *= n.v
-			}
-		}
-		v *= n.v
 	}
 	out := &Node{
 		name: strings.Join(names, "×"),
-		v:    v,
 		op:   OpMultiply,
-		prev: ns,
+		prev: prev,
+	}
+	out.forward = func() {
+		for _, n := range prev {
+			n.Forward()
+		}
+
+		out.v = 1
+		for i, n := range prev {
+			for j := 0; j <= i; j++ {
+				if j == i {
+					localG[j] = out.v
+				} else {
+					localG[j] *= n.v
+				}
+			}
+			out.v *= n.v
+		}
 	}
 	out.backward = func() {
-		for i, n := range ns {
+		for i, n := range prev {
 			if !n.isInput {
 				n.g += localG[i] * out.g
 			}
@@ -181,85 +215,109 @@ func Multiply(ns ...*Node) *Node {
 	return out
 }
 
-func Relu(n *Node) *Node {
-	var v float64
-	if n.v > 0 {
-		v = n.v
-	}
+func Relu(prev *Node) *Node {
 	out := &Node{
-		name: fmt.Sprintf("relu(%s)", n.name),
-		v:    v,
+		name: fmt.Sprintf("relu(%s)", prev.name),
 		op:   OpRelu,
-		prev: []*Node{n},
+		prev: []*Node{prev},
+	}
+	out.forward = func() {
+		prev.Forward()
+
+		out.v = 0
+		if prev.v > 0 {
+			out.v = prev.v
+		}
 	}
 	out.backward = func() {
-		if v > 0 {
-			n.g += out.g
+		if out.v > 0 {
+			prev.g += out.g
 		}
 	}
 	return out
 }
 
-func Sigmoid(n *Node) *Node {
+func Sigmoid(prev *Node) *Node {
 	out := &Node{
-		name: fmt.Sprintf("σ(%s)", n.name),
-		v:    1 / (1 + math.Exp(-n.v)),
+		name: fmt.Sprintf("σ(%s)", prev.name),
 		op:   OpSigmoid,
-		prev: []*Node{n},
+		prev: []*Node{prev},
+	}
+	out.forward = func() {
+		prev.Forward()
+		out.v = 1 / (1 + math.Exp(-prev.v))
 	}
 	out.backward = func() {
-		n.g += out.v * (1 - out.v) * out.g
+		prev.g += out.v * (1 - out.v) * out.g
 	}
 	return out
 }
 
-func Tanh(n *Node) *Node {
+func Tanh(prev *Node) *Node {
 	out := &Node{
-		name: fmt.Sprintf("tanh(%s)", n.name),
-		v:    math.Tanh(n.v),
+		name: fmt.Sprintf("tanh(%s)", prev.name),
 		op:   OpTanh,
-		prev: []*Node{n},
+		prev: []*Node{prev},
+	}
+	out.forward = func() {
+		prev.Forward()
+		out.v = math.Tanh(prev.v)
 	}
 	out.backward = func() {
-		n.g += (1 - out.v) * (1 + out.v) * out.g
+		prev.g += (1 - out.v) * (1 + out.v) * out.g
 	}
 	return out
 }
 
 // Softmax also accepts a parameter `t`, which is sometimes called temperature.
-func Softmax(t float64, ns ...*Node) (outs []*Node) {
-	if len(ns) < 2 {
+func Softmax(t float64, prev ...*Node) []*Node {
+	if len(prev) < 2 {
 		panic("softmax node must have at least two previous nodes")
 	}
 
-	var sum float64
-	ys := make([]float64, len(ns))
-	for i, n := range ns {
-		ys[i] = math.Exp(n.v / t)
-		sum += ys[i]
-	}
-	for i, y := range ys {
-		ys[i] = y / sum
+	outs := make([]*Node, len(prev))
+	for i := range prev {
+		outs[i] = &Node{
+			name: fmt.Sprintf("softmax[index=%d](T=%g)", i, t),
+			op:   OpSoftmax,
+			prev: prev,
+		}
 	}
 
-	for i, y := range ys {
-		outs = append(outs, &Node{
-			name: fmt.Sprintf("softmax[index=%d](T=%g)", i, t),
-			v:    y,
-			op:   OpSoftmax,
-			prev: ns,
-		})
-	}
-	for j, out := range outs {
+	var (
+		sum float64
+		ys  = make([]float64, len(prev))
+	)
+	for i, out := range outs {
+		if i == 0 {
+			out.forward = func() {
+				for _, n := range prev {
+					n.Forward()
+				}
+
+				sum = 0
+				for j, n := range prev {
+					ys[j] = math.Exp(n.v / t)
+					sum += ys[j]
+				}
+				out.v = ys[0] / sum
+			}
+		} else {
+			out.forward = func() {
+				out.v = ys[i] / sum
+			}
+		}
+
 		out.backward = func() {
-			for i, n := range ns {
-				if i == j {
+			for j, n := range prev {
+				if j == i {
 					n.g += out.v * (1 - out.v) * out.g
 				} else {
-					n.g -= out.v * outs[i].v * out.g
+					n.g -= out.v * outs[j].v * out.g
 				}
 			}
 		}
 	}
-	return
+
+	return outs
 }

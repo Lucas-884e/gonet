@@ -9,46 +9,56 @@ import (
 
 func TestMLP(t *testing.T) {
 	var (
-		eps = 1e-10 // error should be less than this
+		eps   = 1e-10 // error should be less than this
+		input = []*Node{
+			NewInputNode(-5, "X_1"),
+			NewInputNode(2, "X_2"),
+		}
 		mlp = NewMLP(2)
 	)
 
+	mlp.AddLayer(2, OpSigmoid)
 	{
-		mlp.AddLayer(2, OpSigmoid)
 		mlp.LoadWeights([][][]float64{
 			{{1, 0.5, 0}, {-0.5, -1, 0}},
 		})
+		out := mlp.Feed(input)
 
-		out := mlp.Feed([]float64{-5, 2})
 		y1 := out[0]
-		y2 := out[1]
+		y1.Forward()
 		assert.InDelta(t, 0.18242552380635635, y1.V(), eps)
 		assert.Equal(t, "σ(B_11+W_111×X_1+W_112×X_2)", y1.Name())
+
+		y2 := out[1]
+		y2.Forward()
 		assert.InDelta(t, 0.9890130573694068, y2.V(), eps)
 		assert.Equal(t, "σ(B_12+W_121×X_1+W_122×X_2)", y2.Name())
 	}
 
+	mlp.AddLayer(2, OpSoftmax)
 	{
-		mlp.AddLayer(2, OpSoftmax)
 		mlp.LoadWeights([][][]float64{
 			{{1, 0.5, 0}, {-0.5, -1, 0}},
 			{{0, -0.5, 1}, {-1, 1, 2}},
 		})
+		out := mlp.Feed(input)
 
-		out := mlp.Feed([]float64{-5, 2})
 		z1 := out[0]
-		z2 := out[1]
+		z1.Forward()
 		assert.InDelta(t, 0.43471206139788876, z1.V(), eps)
+
+		z2 := out[1]
+		z2.Forward()
 		assert.InDelta(t, 0.5652879386021112, z2.V(), eps)
 	}
 
 	var (
-		lossFn  = ModelLossFunc(mlp, CrossEntropyLoss)
-		samples = []util.Sample{{
+		sample = FromSample(util.Sample{
 			X: []float64{-5, 2},
 			Y: []float64{1, 0},
-		}}
-		loss = lossFn(samples)
+		})
+		lossFn = ModelLossFunc(mlp, CrossEntropyLoss)
+		loss   = lossFn([]*Sample{sample})
 	)
 	loss.Backward()
 
