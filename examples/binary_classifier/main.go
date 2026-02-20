@@ -67,7 +67,7 @@ func recordsToTrainingSamples(records [][]string) (samples []util.Sample, err er
 	for _, record := range records {
 		x1a, x2a, x1b, x2b, err := recordToFloats(record)
 		if err != nil {
-			return nil, fmt.Errorf("Convert record %v: %v", record, err)
+			return nil, fmt.Errorf("convert record %v: %v", record, err)
 		}
 		samples = append(samples, util.Sample{
 			X: []float64{x1a, x2a},
@@ -85,8 +85,8 @@ func recordsToTrainingSamples(records [][]string) (samples []util.Sample, err er
 // (x1b, x2b): coordinates with respect to (x1, x2) axes for sample B (of class B)
 func recordToFloats(record []string) (x1a, x2a, x1b, x2b float64, err error) {
 	floats := []*float64{&x1a, &x2a, &x1b, &x2b}
-	for i := 0; i < 4; i++ {
-		*floats[i], err = strconv.ParseFloat(record[i], 64)
+	for i, f := range floats {
+		*f, err = strconv.ParseFloat(record[i], 64)
 		if err != nil {
 			return 0, 0, 0, 0, err
 		}

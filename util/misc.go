@@ -1,3 +1,4 @@
+// Package util ...
 package util
 
 import (
@@ -47,7 +48,7 @@ func ReadCSVDataSet(file string) ([][]string, error) {
 	if err != nil {
 		return nil, err
 	}
-	defer f.Close()
+	defer func() { _ = f.Close() }()
 	r := csv.NewReader(f)
 	return r.ReadAll()
 }

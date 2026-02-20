@@ -50,7 +50,7 @@ type SampleBatch []*Sample
 
 func NewSampleBatch(inputSize, outputSize, batchSize int) SampleBatch {
 	sb := make(SampleBatch, batchSize)
-	for i := 0; i < batchSize; i++ {
+	for i := range sb {
 		sb[i] = NewSample(inputSize, outputSize)
 	}
 	return sb
@@ -79,7 +79,7 @@ func BatchLoss(losses ...*Node) *Node {
 	return Multiply(Plus(losses...), NewNode(1/float64(len(losses)), "mean"))
 }
 
-// Residual Sum of Squared (RSS) or Sum of Squared Errors (SSE).
+// ResidualSumSquaredLoss is the Residual Sum of Squared (RSS) or Sum of Squared Errors (SSE).
 func ResidualSumSquaredLoss(actual, predicted []*Node) *Node {
 	if len(predicted) != len(actual) {
 		panic("Residual-Sum-of-Squared loss function must receive the same number of predicted values and actual values")

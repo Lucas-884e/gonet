@@ -186,7 +186,7 @@ func (mlp *MLP) L() []*Layer {
 	return mlp.layers
 }
 
-// Print prints the network to the console.
+// String returns the string representation of the MLP.
 func (mlp *MLP) String() string {
 	w := new(strings.Builder)
 	fmt.Fprintf(w, "\n## Neural network (#input=%d | #output=%d | #layers=%d)\n", mlp.inputSize, mlp.outputSize, len(mlp.layers))

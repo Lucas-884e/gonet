@@ -8,7 +8,6 @@ import (
 	"math/rand"
 	"os"
 	"strconv"
-	"time"
 )
 
 var (
@@ -49,10 +48,9 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
-	defer f.Close()
+	defer func() { _ = f.Close() }()
 	w := csv.NewWriter(f)
 
-	rand.Seed(time.Now().Unix())
 	for i := 0; i < *count; i++ {
 		xa, ya, xb, yb := randClassAB(*radius, *width, *distance)
 		if err := w.Write(toStrings([]float64{xa, ya, xb, yb})); err != nil {

@@ -10,9 +10,7 @@ import (
 	"github.com/Lucas-884e/gonet/util"
 )
 
-var (
-	dataset = flag.String("ds", "sklearn", "Dataset name.")
-)
+var dataset = flag.String("ds", "sklearn", "Dataset name.")
 
 func main() {
 	flag.Parse()
@@ -78,7 +76,7 @@ func main() {
 		LearningRate: 0.01,
 	}, trainingSet, validationSet)
 
-	//nn.Print()
+	// nn.Print()
 	log.Println("(After training) Testing set prediction precision:", tr.PredictionPrecision(testSet))
 }
 
@@ -123,7 +121,7 @@ func recordToFloats(record []string) (X, Y []float64, err error) {
 	vecLen := len(record) - 1
 
 	X = make([]float64, vecLen)
-	for i := 0; i < vecLen; i++ {
+	for i := range X {
 		X[i], err = strconv.ParseFloat(record[i], 64)
 		if err != nil {
 			return nil, nil, fmt.Errorf("read %d-th element of input vector (%s): %w", i, record[i], err)
