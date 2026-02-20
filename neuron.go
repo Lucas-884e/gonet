@@ -62,11 +62,11 @@ func (n *Neuron) updateWeights(eta float64) float64 {
 }
 
 func (n *Neuron) String() string {
-	var sb strings.Builder
-	sb.WriteString(fmt.Sprintf("#%d: ", n.n))
+	sb := new(strings.Builder)
+	fmt.Fprintf(sb, "#%d: ", n.n)
 	for _, w := range n.weights {
-		sb.WriteString(fmt.Sprintf(" W(%d,%d)=%g", w.n, w.p, w.v))
+		fmt.Fprintf(sb, " W(%d,%d)=%g", w.n, w.p, w.v)
 	}
-	sb.WriteString(fmt.Sprintf("  Activation=%g  Gradient=%g", n.output, n.grad))
+	fmt.Fprintf(sb, "  Activation=%g  Gradient=%g", n.output, n.grad)
 	return sb.String()
 }

@@ -23,10 +23,7 @@ train:
 		// Shuffle before each epoch.
 		util.ShuffleSamples(trainingSet)
 		for start := 0; start < tsSize; start += cfg.BatchSize {
-			end := start + cfg.BatchSize
-			if end > tsSize {
-				end = tsSize
-			}
+			end := min(start+cfg.BatchSize, tsSize)
 			t.model.PropagateSamples(trainingSet[start:end])
 
 			learningRate := util.AnnealingLearningRate(cfg.LearningRate, 1, ep)

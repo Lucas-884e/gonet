@@ -32,9 +32,9 @@ func GenerateRandomLayerWeights(numNeurons, weightsPerNeuron int) [][]float64 {
 		max     = math.Sqrt(3 / float64(weightsPerNeuron))
 		weights = make([][]float64, numNeurons)
 	)
-	for i := 0; i < numNeurons; i++ {
+	for i := range weights {
 		ws := make([]float64, weightsPerNeuron)
-		for j := 0; j < weightsPerNeuron; j++ {
+		for j := range ws {
 			ws[j] = RandomUniformSample(-max, max)
 		}
 		weights[i] = ws

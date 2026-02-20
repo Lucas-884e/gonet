@@ -9,9 +9,9 @@ import (
 )
 
 // setWeights sets layer weight values in an orderly fashion only for test.
-func (layer *Layer) setWeights(weights [][]float64) {
+func (l *Layer) setWeights(weights [][]float64) {
 	for j, neuronWeights := range weights {
-		neuron := layer.neurons[j+1]
+		neuron := l.neurons[j+1]
 		for i, w := range neuronWeights {
 			neuron.weights[i].v = w
 		}

@@ -48,9 +48,7 @@ type linearActivator struct{}
 
 func (linearActivator) A(xs []float64) []float64 {
 	ys := make([]float64, len(xs))
-	for i, x := range xs {
-		ys[i] = x
-	}
+	copy(ys, xs)
 	return ys
 }
 

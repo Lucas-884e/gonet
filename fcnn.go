@@ -107,9 +107,7 @@ func (net *FCNNet) feedInputSample(xs, ys []float64) {
 	if len(net.desiredOutputs) != len(ys) {
 		net.desiredOutputs = make([]float64, len(ys))
 	}
-	for i, y := range ys {
-		net.desiredOutputs[i] = y
-	}
+	copy(net.desiredOutputs, ys)
 }
 
 // forwardPropagate does the forward pass computation:
