@@ -18,7 +18,7 @@ func NewNeuron(inputSize, lidx, nidx int) *Neuron {
 	var (
 		max = math.Sqrt(3 / float64(inputSize))
 		b   = util.RandomUniformSample(-max, max) // bias
-		bn  = NewNode(b, fmt.Sprintf("B_%d%d", lidx, nidx))
+		bn  = NewNode(b, fmt.Sprintf("B_%d_%d", lidx, nidx))
 		n   = &Neuron{
 			lidx:    lidx,
 			nidx:    nidx,
@@ -28,7 +28,7 @@ func NewNeuron(inputSize, lidx, nidx int) *Neuron {
 
 	for widx := 1; widx <= inputSize; widx++ {
 		w := util.RandomUniformSample(-max, max)
-		wn := NewNode(w, fmt.Sprintf("W_%d%d%d", lidx, nidx, widx))
+		wn := NewNode(w, fmt.Sprintf("W_%d_%d_%d", lidx, nidx, widx))
 		n.weights = append(n.weights, wn)
 	}
 	return n
@@ -73,12 +73,18 @@ func (n *Neuron) W() []*Node {
 }
 
 func (n *Neuron) String() string {
-	ws := make([]string, len(n.weights))
+	const maxPrint = 10 // Print at most 10 weights
+	ws := make([]string, min(len(n.weights), maxPrint+1))
+loopingWeights:
 	for i, w := range n.weights {
-		if i == 0 {
-			ws[0] = fmt.Sprintf("Bias=%g", w.V())
-		} else {
-			ws[i] = fmt.Sprintf("W[%d]=%g", i, w.V())
+		switch {
+		case i == 0:
+			ws[0] = fmt.Sprintf("Bias=%.6g", w.V())
+		case i < maxPrint:
+			ws[i] = fmt.Sprintf("W[%d]=%.6g", i, w.V())
+		default:
+			ws[i] = "..."
+			break loopingWeights
 		}
 	}
 	return strings.Join(ws, " | ")
@@ -192,8 +198,14 @@ func (mlp *MLP) String() string {
 	fmt.Fprintf(w, "\n## Neural network (#input=%d | #output=%d | #layers=%d)\n", mlp.inputSize, mlp.outputSize, len(mlp.layers))
 	for _, l := range mlp.layers {
 		fmt.Fprintf(w, "--------------- Layer %d: %d neurons (activator: %s) ---------------\n", l.lidx, len(l.neurons), l.activator)
-		for _, n := range l.neurons {
-			fmt.Fprintf(w, "Neuron #%d:  %s\n", n.nidx, n.String())
+		for i, n := range l.neurons {
+			// Print at most 21 lines of neurons (or 20 lines of neurons plus one line of ellipsis).
+			if len(l.neurons) <= 21 || i < 20 {
+				fmt.Fprintf(w, "Neuron #%d:  %s\n", n.nidx, n.String())
+			} else {
+				fmt.Fprintf(w, "Neuron #%d→%d: ...\n", i, len(l.neurons)-1)
+				break
+			}
 		}
 	}
 	return w.String()

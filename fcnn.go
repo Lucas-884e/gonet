@@ -154,8 +154,6 @@ func (net *FCNNet) PropagateSamples(samples []util.Sample) {
 	for _, sample := range samples {
 		net.feedInputSample(sample.X, sample.Y)
 		net.forwardPropagate()
-		// TODO(lucas): need fix. Should not do backward propagration for every sample,
-		// otherwise batchSize > 1 training won't work.
 		net.backwardPropagate()
 	}
 

@@ -1,7 +1,6 @@
 package main
 
 import (
-	"fmt"
 	"log"
 
 	"github.com/Lucas-884e/gonet"
@@ -29,10 +28,10 @@ func nonGraphTrain(trainingSet, validationSet, testSet []util.Sample) {
 		tr.PredictionPrecision(validationSet), tr.PredictionPrecision(testSet))
 
 	tr.Train(util.TrainConfig{
-		BatchSize:    1,
+		BatchSize:    20,
 		Epochs:       20,
 		StopEps:      0,
-		LearningRate: 0.01,
+		LearningRate: 0.3,
 	}, trainingSet, validationSet)
 
 	nn.Print()
@@ -62,10 +61,10 @@ func graphTrain(trainingSet, validationSet, testSet []util.Sample) {
 
 	var (
 		cfg = util.TrainConfig{
-			BatchSize:    5,
+			BatchSize:    20,
 			Epochs:       20,
 			StopEps:      0,
-			LearningRate: 0.1,
+			LearningRate: 0.3,
 		}
 		batchInput = graph.NewSampleBatch(2, 1, cfg.BatchSize)
 		loss       = lossFn(batchInput)
@@ -75,11 +74,7 @@ train:
 		// Shuffle before each epoch.
 		util.ShuffleSamples(trainingSet)
 		for start := 0; start < tsSize; start += cfg.BatchSize {
-			end := start + cfg.BatchSize
-			if end > tsSize {
-				break
-			}
-
+			end := min(start+cfg.BatchSize, tsSize)
 			batchInput.Update(trainingSet[start:end])
 			loss.Backward()
 
@@ -96,7 +91,9 @@ train:
 		}
 	}
 
-	fmt.Println(mlp)
+	precision = PredictionPrecision(mlp, testSet, isCorrect)
+	log.Printf("[After training] Test set prediction precision: %g", precision)
+	// fmt.Println(mlp)
 }
 
 func PredictionPrecision(model *graph.MLP, dataset []util.Sample, isCorrect util.IsCorrectFunc) float32 {

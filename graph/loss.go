@@ -18,17 +18,10 @@ type Sample struct {
 }
 
 func NewSample(inputSize, outputSize int) *Sample {
-	s := &Sample{
-		X: make([]*Node, inputSize),
-		Y: make([]*Node, outputSize),
+	return &Sample{
+		X: NewInputNodeBatch(inputSize, "X_%d"),
+		Y: NewInputNodeBatch(outputSize, "Y_%d"),
 	}
-	for i := range s.X {
-		s.X[i] = NewInputNode(0, fmt.Sprintf("X_%d", i+1))
-	}
-	for i := range s.Y {
-		s.Y[i] = NewInputNode(0, fmt.Sprintf("Y_%d", i+1))
-	}
-	return s
 }
 
 func FromSample(us util.Sample) *Sample {

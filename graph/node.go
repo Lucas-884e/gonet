@@ -21,6 +21,14 @@ func NewInputNode(v float64, name string) *Node {
 	return n
 }
 
+func NewInputNodeBatch(size int, nameFmt string) []*Node {
+	batch := make([]*Node, size)
+	for i := range batch {
+		batch[i] = NewInputNode(0, fmt.Sprintf(nameFmt, i+1))
+	}
+	return batch
+}
+
 func NodeValues(ns []*Node) []float64 {
 	vs := make([]float64, len(ns))
 	for i, n := range ns {
@@ -41,6 +49,7 @@ type Node struct {
 
 	g        float64 // gradient: ∂(next_node)/∂(current_node)
 	backward func()  // backward propagation function for computing the gradient `g`
+	sorted   []*Node
 }
 
 func (n *Node) SetName(name string) {
@@ -113,6 +122,13 @@ func (n *Node) String() string {
 }
 
 func (n *Node) topologicalSort() (sorted []*Node) {
+	// We have reused all the graph nodes on every forward and backward propagation,
+	// so we don't need to sort every time. Otherwise, it will significantly slow
+	// down the training process (by many times).
+	if len(n.sorted) > 0 {
+		return n.sorted
+	}
+
 	var (
 		sort    func(*Node)
 		visited = make(map[*Node]bool)
@@ -130,6 +146,8 @@ func (n *Node) topologicalSort() (sorted []*Node) {
 		}
 	}
 	sort(n)
+
+	n.sorted = sorted
 	return sorted
 }
 

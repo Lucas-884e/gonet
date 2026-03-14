@@ -5,12 +5,15 @@ import (
 	"fmt"
 	"log"
 	"strconv"
+	"time"
 
-	"github.com/Lucas-884e/gonet"
 	"github.com/Lucas-884e/gonet/util"
 )
 
-var dataset = flag.String("ds", "sklearn", "Dataset name.")
+var (
+	dataset  = flag.String("ds", "sklearn", "Dataset name.")
+	useGraph = flag.Bool("g", false, "use Computational-Graph approach")
+)
 
 func main() {
 	flag.Parse()
@@ -64,45 +67,14 @@ func main() {
 		}
 	}
 
-	nn := constructNetwork(len(trainingSet[0].X), 32, 16)
-	tr := gonet.NewTrainer(nn, isCorrect)
-	log.Printf("(Before training) Prediction precision: validation set = %g | testing set = %g",
-		tr.PredictionPrecision(validationSet), tr.PredictionPrecision(testSet))
-
-	tr.Train(util.TrainConfig{
-		BatchSize:    1,
-		Epochs:       30,
-		StopEps:      0,
-		LearningRate: 0.01,
-	}, trainingSet, validationSet)
-
-	// nn.Print()
-	log.Println("(After training) Testing set prediction precision:", tr.PredictionPrecision(testSet))
-}
-
-func constructNetwork(inputLayerSize int, hiddenLayerSizes ...int) *gonet.FCNNet {
-	nn := gonet.NewFCNNet(inputLayerSize, gonet.LossCrossEntropy, gonet.ReluActivator())
-	for _, size := range hiddenLayerSizes {
-		nn.AddLayer(size)
+	train := nonGraphTrain
+	if *useGraph {
+		train = graphTrain
 	}
-	nn.AddLayerWithActivator(10, gonet.SoftmaxActivator(1))
-	nn.RandomizeInitialWeights()
-	return nn
-}
 
-func isCorrect(pred, actual []float64) bool {
-	findPrediction := func(ys []float64) int {
-		maxIdx := -1
-		var maxProb float64
-		for i, y := range ys {
-			if y > maxProb {
-				maxProb = y
-				maxIdx = i
-			}
-		}
-		return maxIdx
-	}
-	return findPrediction(pred) == findPrediction(actual)
+	start := time.Now()
+	train(trainingSet, validationSet, testSet)
+	fmt.Println("\nTraining time cost:", time.Since(start))
 }
 
 func recordsToTrainingSamples(records [][]string) (samples []util.Sample, err error) {
