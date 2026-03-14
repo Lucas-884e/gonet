@@ -41,9 +41,9 @@ func nonGraphTrain(trainingSet, validationSet, testSet []util.Sample) {
 func constructGraphNetwork(hiddenLayerSizes ...int) *graph.MLP {
 	mlp := graph.NewMLP(2)
 	for _, size := range hiddenLayerSizes {
-		mlp.AddLayer(size, graph.OpRelu)
+		mlp.AddLayer(size, graph.OpRelu, true)
 	}
-	mlp.AddLayer(1, graph.OpNone)
+	mlp.AddLayer(1, graph.OpNone, true)
 	return mlp
 }
 

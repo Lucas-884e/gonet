@@ -12,17 +12,16 @@ type Neuron struct {
 	lidx    int     // layer index
 	nidx    int     // neuron index in the layer
 	weights []*Node // first node is bias
+	hasBias bool
 }
 
-func NewNeuron(inputSize, lidx, nidx int) *Neuron {
+func NewNeuron(inputSize, lidx, nidx int, withBias bool) *Neuron {
 	var (
 		max = math.Sqrt(3 / float64(inputSize))
-		b   = util.RandomUniformSample(-max, max) // bias
-		bn  = NewNode(b, fmt.Sprintf("B_%d_%d", lidx, nidx))
 		n   = &Neuron{
 			lidx:    lidx,
 			nidx:    nidx,
-			weights: []*Node{bn},
+			hasBias: withBias,
 		}
 	)
 
@@ -31,13 +30,23 @@ func NewNeuron(inputSize, lidx, nidx int) *Neuron {
 		wn := NewNode(w, fmt.Sprintf("W_%d_%d_%d", lidx, nidx, widx))
 		n.weights = append(n.weights, wn)
 	}
+
+	if withBias {
+		b := util.RandomUniformSample(-max, max) // bias
+		bn := NewNode(b, fmt.Sprintf("B_%d_%d", lidx, nidx))
+		n.weights = append(n.weights, bn)
+	}
+
 	return n
 }
 
 func (n *Neuron) Feed(input []*Node, activator Operator) *Node {
-	wx := []*Node{n.weights[0]}
+	var wx []*Node
 	for i, xn := range input {
-		wx = append(wx, Multiply(n.weights[i+1], xn))
+		wx = append(wx, Multiply(n.weights[i], xn))
+	}
+	if n.hasBias {
+		wx = append(wx, n.weights[len(input)])
 	}
 	sum := Plus(wx...)
 
@@ -75,16 +84,16 @@ func (n *Neuron) W() []*Node {
 func (n *Neuron) String() string {
 	const maxPrint = 10 // Print at most 10 weights
 	ws := make([]string, min(len(n.weights), maxPrint+1))
-loopingWeights:
 	for i, w := range n.weights {
-		switch {
-		case i == 0:
-			ws[0] = fmt.Sprintf("Bias=%.6g", w.V())
-		case i < maxPrint:
-			ws[i] = fmt.Sprintf("W[%d]=%.6g", i, w.V())
-		default:
+		if i == maxPrint {
 			ws[i] = "..."
-			break loopingWeights
+			break
+		}
+
+		if i == len(n.weights)-1 && n.hasBias {
+			ws[i] = fmt.Sprintf("Bias=%.6g", w.V())
+		} else {
+			ws[i] = fmt.Sprintf("W[%d]=%.6g", i, w.V())
 		}
 	}
 	return strings.Join(ws, " | ")
@@ -96,13 +105,13 @@ type Layer struct {
 	activator Operator
 }
 
-func NewLayer(inputSize, outputSize, lidx int, activator Operator) *Layer {
+func NewLayer(inputSize, outputSize, lidx int, activator Operator, withBias bool) *Layer {
 	l := &Layer{
 		lidx:      lidx,
 		activator: activator,
 	}
 	for nidx := 1; nidx <= outputSize; nidx++ {
-		n := NewNeuron(inputSize, lidx, nidx)
+		n := NewNeuron(inputSize, lidx, nidx, withBias)
 		l.neurons = append(l.neurons, n)
 	}
 	return l
@@ -151,10 +160,10 @@ func NewMLP(inputSize int) *MLP {
 	}
 }
 
-func (mlp *MLP) AddLayer(outputSize int, activator Operator) {
+func (mlp *MLP) AddLayer(outputSize int, activator Operator, withBias bool) {
 	lidx := len(mlp.layers) + 1
 	// Use the outputSize of the old output layer as the inputSize of the new output layer.
-	layer := NewLayer(mlp.outputSize, outputSize, lidx, activator)
+	layer := NewLayer(mlp.outputSize, outputSize, lidx, activator, withBias)
 	mlp.layers = append(mlp.layers, layer)
 	// Update new output layer size.
 	mlp.outputSize = outputSize

@@ -26,10 +26,10 @@ func nonGraphTrain(trainingSet, validationSet, testSet []util.Sample) {
 		tr.PredictionPrecision(validationSet), tr.PredictionPrecision(testSet))
 
 	tr.Train(util.TrainConfig{
-		BatchSize:    1,
-		Epochs:       30,
+		BatchSize:    10,
+		Epochs:       20,
 		StopEps:      0,
-		LearningRate: 0.01,
+		LearningRate: 0.05,
 	}, trainingSet, validationSet)
 
 	// nn.Print()
@@ -39,9 +39,9 @@ func nonGraphTrain(trainingSet, validationSet, testSet []util.Sample) {
 func constructGraphNetwork(inputLayerSize int, hiddenLayerSizes ...int) *graph.MLP {
 	mlp := graph.NewMLP(inputLayerSize)
 	for _, size := range hiddenLayerSizes {
-		mlp.AddLayer(size, graph.OpRelu)
+		mlp.AddLayer(size, graph.OpRelu, true)
 	}
-	mlp.AddLayer(10, graph.OpSoftmax)
+	mlp.AddLayer(10, graph.OpSoftmax, true)
 	return mlp
 }
 
@@ -60,10 +60,10 @@ func graphTrain(trainingSet, validationSet, testSet []util.Sample) {
 
 	var (
 		cfg = util.TrainConfig{
-			BatchSize:    1,
-			Epochs:       10,
+			BatchSize:    10,
+			Epochs:       20,
 			StopEps:      0,
-			LearningRate: 0.01,
+			LearningRate: 0.05,
 		}
 		batchInput = graph.NewSampleBatch(inputLayerSize, 10, cfg.BatchSize)
 		loss       = lossFn(batchInput)
@@ -78,7 +78,6 @@ train:
 			loss.Backward()
 
 			learningRate := util.AnnealingLearningRate(cfg.LearningRate, 1, ep)
-			// fmt.Printf("Learning rate: %g\n", learningRate)
 			if delta = mlp.Learn(learningRate); delta < cfg.StopEps {
 				log.Printf("* Reached stopping criterion (delta = %g < %g).", delta, cfg.StopEps)
 				break train

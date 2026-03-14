@@ -109,13 +109,13 @@ func (n *Node) Backward() {
 func (n *Node) String() string {
 	var (
 		sorted = n.topologicalSort()
-		sb     strings.Builder
+		sb     = new(strings.Builder)
 	)
 	sb.WriteByte('\n')
 	for _, sn := range sorted {
 		sb.WriteString(sn.name)
-		sb.WriteString(fmt.Sprintf(" | value=%.6g", sn.v))
-		sb.WriteString(fmt.Sprintf(" | gradient=%.6g", sn.g))
+		fmt.Fprintf(sb, " | value=%.6g", sn.v)
+		fmt.Fprintf(sb, " | gradient=%.6g", sn.g)
 		sb.WriteByte('\n')
 	}
 	return sb.String()
