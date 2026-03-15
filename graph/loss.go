@@ -82,13 +82,7 @@ func ResidualSumSquaredLoss(actual, predicted []*Node) *Node {
 		name: fmt.Sprintf("RSS[count=%d]", len(actual)),
 		prev: predicted,
 	}
-	out.forward = func() {
-		for _, n := range predicted {
-			if n.forward != nil {
-				n.forward()
-			}
-		}
-	}
+	out.forward = func() {}
 	out.backward = func() {
 		for i, n := range predicted {
 			n.g += (n.v - actual[i].v) * out.g
@@ -113,13 +107,7 @@ func CrossEntropyLoss(actual, predicted []*Node) *Node {
 		name: fmt.Sprintf("cross_entropy[count=%d]", len(actual)),
 		prev: predicted,
 	}
-	out.forward = func() {
-		for _, n := range predicted {
-			if n.forward != nil {
-				n.forward()
-			}
-		}
-	}
+	out.forward = func() {}
 	out.backward = func() {
 		var observed int
 		for idx, a := range actual {
@@ -144,13 +132,7 @@ func MaxMarginLoss(actual, predicted []*Node) *Node {
 		name: fmt.Sprintf("MaxMargin[count=%d]", len(actual)),
 		prev: predicted,
 	}
-	out.forward = func() {
-		for _, n := range predicted {
-			if n.forward != nil {
-				n.forward()
-			}
-		}
-	}
+	out.forward = func() {}
 	out.backward = func() {
 		for i, n := range predicted {
 			if d := actual[i]; d.v*n.v < 1 {

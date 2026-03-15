@@ -3,6 +3,7 @@ package graph
 import (
 	"fmt"
 	"math"
+	"slices"
 	"strings"
 )
 
@@ -44,12 +45,13 @@ type Node struct {
 	op      Operator
 	prev    []*Node // previous node
 
-	v       float64 // value of current node, computed with `forward`
-	forward func()
+	v            float64 // value of current node, computed with `forward`
+	forward      func()
+	forwardOrder []*Node
 
-	g        float64 // gradient: ∂(next_node)/∂(current_node)
-	backward func()  // backward propagation function for computing the gradient `g`
-	sorted   []*Node
+	g             float64 // gradient: ∂(next_node)/∂(current_node)
+	backward      func()  // backward propagation function for computing the gradient `g`
+	backwardOrder []*Node
 }
 
 func (n *Node) SetName(name string) {
@@ -78,16 +80,14 @@ func (n *Node) Learn(rate float64) float64 {
 }
 
 func (n *Node) Forward() {
-	if n.forward != nil {
-		n.forward()
+	// We do breadth-first-search first so that we don't do forward propagation
+	// on the same node more than once.
+	for _, node := range n.bfs() {
+		node.forward()
 	}
 }
 
 func (n *Node) Backward() {
-	if n.isInput {
-		return
-	}
-
 	n.Forward()
 
 	sorted := n.topologicalSort()
@@ -96,11 +96,8 @@ func (n *Node) Backward() {
 	}
 	n.g = 1
 
-	// We appended current node after sorting previous nodes, so the `sorted` is
-	// in reverse topological order. Therefore, we should call their backward
-	// function in reverse order.
-	for i := len(sorted) - 1; i >= 0; i-- {
-		if sn := sorted[i]; !sn.isLeaf {
+	for _, sn := range sorted {
+		if !sn.isLeaf {
 			sn.backward()
 		}
 	}
@@ -121,12 +118,48 @@ func (n *Node) String() string {
 	return sb.String()
 }
 
+func (n *Node) bfs() (nodes []*Node) {
+	// We have reused all the graph nodes on every forward and backward propagation,
+	// so we don't need to traversal every time. Otherwise, it will significantly
+	// slow down the training process (by many times).
+	if len(n.forwardOrder) > 0 {
+		return n.forwardOrder
+	}
+
+	var (
+		visited = make(map[*Node]bool)
+		stack   = []*Node{n}
+	)
+	for len(stack) > 0 {
+		pop := stack[0]
+		stack = stack[1:]
+		if !pop.isLeaf {
+			nodes = append(nodes, pop)
+		}
+
+		// Traverse in reverse order so that after `slices.Reverse`, the result
+		// sequence will be in natural order. Otherwise, the forward propagation
+		// of some types (eg, Softmax) of Nodes would fail because they depends on
+		// the first node being forward propagated first.
+		for i := len(pop.prev) - 1; i >= 0; i-- {
+			if p := pop.prev[i]; !visited[p] && !p.isLeaf {
+				visited[p] = true
+				stack = append(stack, p)
+			}
+		}
+	}
+
+	slices.Reverse(nodes)
+	n.forwardOrder = nodes
+	return nodes
+}
+
 func (n *Node) topologicalSort() (sorted []*Node) {
 	// We have reused all the graph nodes on every forward and backward propagation,
 	// so we don't need to sort every time. Otherwise, it will significantly slow
 	// down the training process (by many times).
-	if len(n.sorted) > 0 {
-		return n.sorted
+	if len(n.backwardOrder) > 0 {
+		return n.backwardOrder
 	}
 
 	var (
@@ -139,15 +172,24 @@ func (n *Node) topologicalSort() (sorted []*Node) {
 			for _, p := range curr.prev {
 				sort(p)
 			}
+
 			// Append current node after sorting previous nodes. This is especially
-			// imported for recurrent neural networks where one previous node might
+			// important for recurrent neural networks where one previous node might
 			// depend on another previous node of the same current node.
+			// NOTE: although we don't do backward propagation on leaf nodes
+			// (ie, weight nodes), we still need to put them in the sorted list as we
+			// need to keep track all the nodes whose gradients have to be cleared
+			// before the training on each new batch.
 			sorted = append(sorted, curr)
 		}
 	}
 	sort(n)
 
-	n.sorted = sorted
+	// We appended current node after sorting previous nodes, so the `sorted` is
+	// in reverse topological order. Therefore, we do `Reverse` so that we can do
+	// back-propagation in normal order.
+	slices.Reverse(sorted)
+	n.backwardOrder = sorted
 	return sorted
 }
 
@@ -166,10 +208,6 @@ func Plus(prev ...*Node) *Node {
 		prev: prev,
 	}
 	out.forward = func() {
-		for _, n := range prev {
-			n.Forward()
-		}
-
 		out.v = 0
 		for _, n := range prev {
 			out.v += n.v
@@ -207,10 +245,6 @@ func Multiply(prev ...*Node) *Node {
 		prev: prev,
 	}
 	out.forward = func() {
-		for _, n := range prev {
-			n.Forward()
-		}
-
 		out.v = 1
 		for i, n := range prev {
 			for j := 0; j <= i; j++ {
@@ -240,8 +274,6 @@ func Relu(prev *Node) *Node {
 		prev: []*Node{prev},
 	}
 	out.forward = func() {
-		prev.Forward()
-
 		out.v = 0
 		if prev.v > 0 {
 			out.v = prev.v
@@ -262,7 +294,6 @@ func Sigmoid(prev *Node) *Node {
 		prev: []*Node{prev},
 	}
 	out.forward = func() {
-		prev.Forward()
 		out.v = 1 / (1 + math.Exp(-prev.v))
 	}
 	out.backward = func() {
@@ -278,7 +309,6 @@ func Tanh(prev *Node) *Node {
 		prev: []*Node{prev},
 	}
 	out.forward = func() {
-		prev.Forward()
 		out.v = math.Tanh(prev.v)
 	}
 	out.backward = func() {
@@ -307,12 +337,12 @@ func Softmax(t float64, prev ...*Node) []*Node {
 		ys  = make([]float64, len(prev))
 	)
 	for i, out := range outs {
+		// NOTE: this must be consistent with the traversal order of forward
+		// propagation of the network. If it's not the first (i==0) output forward
+		// running first (ie, `sum` is not computed first), it would result in
+		// completely wrong `out.v`.
 		if i == 0 {
 			out.forward = func() {
-				for _, n := range prev {
-					n.Forward()
-				}
-
 				sum = 0
 				for j, n := range prev {
 					ys[j] = math.Exp(n.v / t)
