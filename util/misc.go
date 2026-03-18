@@ -67,10 +67,3 @@ func ShuffleSamples[T any](samples []T) {
 		samples[i], samples[j] = samples[j], samples[i]
 	})
 }
-
-// AnnealingLearningRate returns an annealed learning rate by the following formula:
-//
-//	η = η_0 / (1 + decay * epoch)
-func AnnealingLearningRate(eta0, decay float64, epoch int) float64 {
-	return eta0 / (1 + decay*float64(epoch))
-}

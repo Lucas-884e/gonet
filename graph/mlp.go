@@ -64,9 +64,9 @@ func (n *Neuron) Feed(input []*Node, activator Operator) *Node {
 	}
 }
 
-func (n *Neuron) Learn(rate float64) (delta float64) {
+func (n *Neuron) Learn(lrFn util.LearningRateFunc) (delta float64) {
 	for _, w := range n.weights {
-		delta += w.Learn(rate)
+		delta += w.Learn(lrFn)
 	}
 	return
 }
@@ -128,9 +128,9 @@ func (l *Layer) Feed(input []*Node) []*Node {
 	return out
 }
 
-func (l *Layer) Learn(rate float64) (delta float64) {
+func (l *Layer) Learn(lrFn util.LearningRateFunc) (delta float64) {
 	for _, n := range l.neurons {
-		delta += n.Learn(rate)
+		delta += n.Learn(lrFn)
 	}
 	return
 }
@@ -177,9 +177,9 @@ func (mlp *MLP) Feed(input []*Node) []*Node {
 	return output
 }
 
-func (mlp *MLP) Learn(rate float64) (delta float64) {
+func (mlp *MLP) Learn(lrFn util.LearningRateFunc) (delta float64) {
 	for _, l := range mlp.layers {
-		delta += l.Learn(rate)
+		delta += l.Learn(lrFn)
 	}
 	return
 }

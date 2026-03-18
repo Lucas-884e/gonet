@@ -29,7 +29,7 @@ func nonGraphTrain(trainingSet, validationSet, testSet []util.Sample) {
 
 	tr.Train(util.TrainConfig{
 		BatchSize:    20,
-		Epochs:       20,
+		Epochs:       10,
 		StopEps:      0,
 		LearningRate: 0.3,
 	}, trainingSet, validationSet)
@@ -62,7 +62,7 @@ func graphTrain(trainingSet, validationSet, testSet []util.Sample) {
 	var (
 		cfg = util.TrainConfig{
 			BatchSize:    20,
-			Epochs:       20,
+			Epochs:       10,
 			StopEps:      0,
 			LearningRate: 0.3,
 		}
@@ -78,8 +78,8 @@ train:
 			batchInput.Update(trainingSet[start:end])
 			loss.Backward()
 
-			learningRate := util.AnnealingLearningRate(cfg.LearningRate, 1, ep)
-			if delta = mlp.Learn(learningRate); delta < cfg.StopEps {
+			lrFunc := util.AnnealingLearningRateFunc(cfg.LearningRate, 1, ep)
+			if delta = mlp.Learn(lrFunc); delta < cfg.StopEps {
 				log.Printf("* Reached stopping criterion (delta = %g < %g).", delta, cfg.StopEps)
 				break train
 			}

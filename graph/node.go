@@ -5,6 +5,8 @@ import (
 	"math"
 	"slices"
 	"strings"
+
+	"github.com/Lucas-884e/gonet/util"
 )
 
 func NewNode(v float64, name string) *Node {
@@ -74,8 +76,8 @@ func (n *Node) G() float64 {
 	return n.g
 }
 
-func (n *Node) Learn(rate float64) float64 {
-	n.v -= rate * n.g
+func (n *Node) Learn(lrFn util.LearningRateFunc) float64 {
+	n.v -= lrFn(n.g)
 	return n.g * n.g
 }
 
@@ -351,11 +353,15 @@ func Softmax(t float64, prev ...*Node) []*Node {
 				out.v = ys[0] / sum
 			}
 		} else {
+			// NOTE: This closure only works for Go1.22+ because `i` doesn't preserve
+			// the value on the out.forward assignment before this version.
 			out.forward = func() {
 				out.v = ys[i] / sum
 			}
 		}
 
+		// NOTE: This closure only works for Go1.22+ because `i` doesn't preserve
+		// the value on the out.forward assignment before this version.
 		out.backward = func() {
 			for j, n := range prev {
 				if j == i {
