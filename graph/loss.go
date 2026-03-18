@@ -2,6 +2,7 @@ package graph
 
 import (
 	"fmt"
+	"math"
 
 	"github.com/Lucas-884e/gonet/util"
 )
@@ -82,7 +83,13 @@ func ResidualSumSquaredLoss(actual, predicted []*Node) *Node {
 		name: fmt.Sprintf("RSS[count=%d]", len(actual)),
 		prev: predicted,
 	}
-	out.forward = func() {}
+	out.forward = func() {
+		out.v = 0
+		for i, n := range predicted {
+			diff := n.v - actual[i].v
+			out.v += diff * diff / 2
+		}
+	}
 	out.backward = func() {
 		for i, n := range predicted {
 			n.g += (n.v - actual[i].v) * out.g
@@ -107,7 +114,18 @@ func CrossEntropyLoss(actual, predicted []*Node) *Node {
 		name: fmt.Sprintf("cross_entropy[count=%d]", len(actual)),
 		prev: predicted,
 	}
-	out.forward = func() {}
+	out.forward = func() {
+		var observed int
+		for idx, a := range actual {
+			if a.v > 0 {
+				observed = idx
+				break
+			}
+		}
+
+		n := predicted[observed]
+		out.v = -math.Log(n.v)
+	}
 	out.backward = func() {
 		var observed int
 		for idx, a := range actual {
@@ -124,20 +142,21 @@ func CrossEntropyLoss(actual, predicted []*Node) *Node {
 }
 
 func MaxMarginLoss(actual, predicted []*Node) *Node {
-	if len(predicted) != len(actual) {
-		panic(fmt.Sprintf("Max-Margin loss function must receive the same number of predicted values and actual values, got actual %v", actual))
+	if len(predicted) != 1 || len(actual) != 1 {
+		panic("Max-Margin loss function must receive scalar values for prediction or label")
 	}
 
 	out := &Node{
 		name: fmt.Sprintf("MaxMargin[count=%d]", len(actual)),
 		prev: predicted,
 	}
-	out.forward = func() {}
+	out.forward = func() {
+		out.v = max(0, 1-predicted[0].v*actual[0].v)
+	}
 	out.backward = func() {
-		for i, n := range predicted {
-			if d := actual[i]; d.v*n.v < 1 {
-				n.g -= d.v * out.g
-			}
+		n := predicted[0]
+		if d := actual[0]; d.v*n.v < 1 {
+			n.g -= d.v * out.g
 		}
 	}
 	return out
