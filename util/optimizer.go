@@ -1,5 +1,7 @@
 package util
 
+import "math"
+
 type LearningRateFunc func(grad float64) (rate float64)
 
 // AnnealingLearningRate returns an annealed learning rate by the following formula:
@@ -15,15 +17,50 @@ func ConstantLearningRateFunc(rate float64) LearningRateFunc {
 	}
 }
 
-func AnnealingLearningRateFunc(eta0, decay float64, epoch int) LearningRateFunc {
-	eta := eta0 / (1 + decay*float64(epoch))
+func AnnealingLearningRateFunc(eta, decay float64, epoch int) LearningRateFunc {
+	eta = eta / (1 + decay*float64(epoch))
 	return func(g float64) float64 {
 		return eta * g
 	}
 }
 
-func AdamLearningRateFunc(beta1, beta2, epsilon float64) LearningRateFunc {
-	return func(g float64) float64 {
-		return 0
+type AdamOptimizer struct {
+	eta     float64
+	beta1   float64
+	beta2   float64
+	epsilon float64
+
+	m      float64 // momentum
+	v      float64 // velocity
+	beta1t float64
+	beta2t float64
+}
+
+func NewAdamOptimizer(eta, beta1, beta2, epsilon float64) *AdamOptimizer {
+	return &AdamOptimizer{
+		eta:     eta,
+		beta1:   beta1,
+		beta2:   beta2,
+		epsilon: epsilon,
+		beta1t:  1.0,
+		beta2t:  1.0,
 	}
+}
+
+func NewDefaultAdamOptimizer(eta float64) *AdamOptimizer {
+	return NewAdamOptimizer(eta, 0.9, 0.999, 1e-8)
+}
+
+func (ao *AdamOptimizer) Step() {
+	ao.beta1t *= ao.beta1
+	ao.beta2t *= ao.beta2
+}
+
+func (ao *AdamOptimizer) LearningRate(g float64) float64 {
+	ao.m = ao.beta1*ao.m + (1-ao.beta1)*g
+	ao.v = ao.beta2*ao.v + (1-ao.beta2)*g*g
+
+	mHat := ao.m / (1 - ao.beta1t)
+	vHat := ao.v / (1 - ao.beta2t)
+	return ao.eta * mHat / (math.Sqrt(vHat) + ao.epsilon)
 }

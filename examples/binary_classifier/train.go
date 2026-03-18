@@ -29,7 +29,7 @@ func nonGraphTrain(trainingSet, validationSet, testSet []util.Sample) {
 
 	tr.Train(util.TrainConfig{
 		BatchSize:    20,
-		Epochs:       10,
+		Epochs:       20,
 		StopEps:      0,
 		LearningRate: 0.3,
 	}, trainingSet, validationSet)
@@ -62,12 +62,13 @@ func graphTrain(trainingSet, validationSet, testSet []util.Sample) {
 	var (
 		cfg = util.TrainConfig{
 			BatchSize:    20,
-			Epochs:       10,
+			Epochs:       20,
 			StopEps:      0,
 			LearningRate: 0.3,
 		}
 		batchInput = graph.NewSampleBatch(2, 1, cfg.BatchSize)
 		loss       = lossFn(batchInput)
+		optimizer  = util.NewDefaultAdamOptimizer(cfg.LearningRate)
 	)
 train:
 	for ep := 0; ep < cfg.Epochs; ep++ {
@@ -78,8 +79,8 @@ train:
 			batchInput.Update(trainingSet[start:end])
 			loss.Backward()
 
-			lrFunc := util.AnnealingLearningRateFunc(cfg.LearningRate, 1, ep)
-			if delta = mlp.Learn(lrFunc); delta < cfg.StopEps {
+			optimizer.Step()
+			if delta = mlp.Learn(optimizer.LearningRate); delta < cfg.StopEps {
 				log.Printf("* Reached stopping criterion (delta = %g < %g).", delta, cfg.StopEps)
 				break train
 			}
