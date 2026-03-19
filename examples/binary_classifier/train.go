@@ -64,11 +64,11 @@ func graphTrain(trainingSet, validationSet, testSet []util.Sample) {
 			BatchSize:    20,
 			Epochs:       20,
 			StopEps:      0,
-			LearningRate: 0.3,
+			LearningRate: 0.03,
 		}
 		batchInput = graph.NewSampleBatch(2, 1, cfg.BatchSize)
 		loss       = lossFn(batchInput)
-		optimizer  = util.NewDefaultAdamOptimizer(cfg.LearningRate)
+		optimizer  = util.NewDefaultAdamOptimizer(mlp.Parameters(), cfg.LearningRate)
 	)
 train:
 	for ep := 0; ep < cfg.Epochs; ep++ {
@@ -79,8 +79,7 @@ train:
 			batchInput.Update(trainingSet[start:end])
 			loss.Backward()
 
-			optimizer.Step()
-			if delta = mlp.Learn(optimizer.LearningRate); delta < cfg.StopEps {
+			if delta = optimizer.Learn(); delta < cfg.StopEps {
 				log.Printf("* Reached stopping criterion (delta = %g < %g).", delta, cfg.StopEps)
 				break train
 			}

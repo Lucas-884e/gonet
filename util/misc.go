@@ -67,3 +67,11 @@ func ShuffleSamples[T any](samples []T) {
 		samples[i], samples[j] = samples[j], samples[i]
 	})
 }
+
+func ListConvert[S, T any](s []S) []T {
+	t := make([]T, len(s))
+	for i, e := range s {
+		t[i] = any(e).(T)
+	}
+	return t
+}

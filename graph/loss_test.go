@@ -62,6 +62,6 @@ func TestModelLossFunc(t *testing.T) {
 	g := ((2*1-2.1)*1 + (2*0.5-0.9)*0.5 + (2*(-0.7)-(-1.5))*(-0.7)) / 3
 	assert.InDelta(t, g, w.G(), 1e-10)
 
-	w.Learn(util.ConstantLearningRateFunc(5))
+	w.Learn(5 * g)
 	assert.InDelta(t, 2.2, w.V(), 1e-10)
 }

@@ -64,11 +64,8 @@ func (n *Neuron) Feed(input []*Node, activator Operator) *Node {
 	}
 }
 
-func (n *Neuron) Learn(lrFn util.LearningRateFunc) (delta float64) {
-	for _, w := range n.weights {
-		delta += w.Learn(lrFn)
-	}
-	return
+func (n *Neuron) Parameters() []util.Parameter {
+	return util.ListConvert[*Node, util.Parameter](n.weights)
 }
 
 func (n *Neuron) LoadWeights(ws []float64) {
@@ -128,9 +125,9 @@ func (l *Layer) Feed(input []*Node) []*Node {
 	return out
 }
 
-func (l *Layer) Learn(lrFn util.LearningRateFunc) (delta float64) {
+func (l *Layer) Parameters() (p []util.Parameter) {
 	for _, n := range l.neurons {
-		delta += n.Learn(lrFn)
+		p = append(p, n.Parameters()...)
 	}
 	return
 }
@@ -177,9 +174,9 @@ func (mlp *MLP) Feed(input []*Node) []*Node {
 	return output
 }
 
-func (mlp *MLP) Learn(lrFn util.LearningRateFunc) (delta float64) {
+func (mlp *MLP) Parameters() (p []util.Parameter) {
 	for _, l := range mlp.layers {
-		delta += l.Learn(lrFn)
+		p = append(p, l.Parameters()...)
 	}
 	return
 }

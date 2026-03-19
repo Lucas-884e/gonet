@@ -5,8 +5,6 @@ import (
 	"math"
 	"slices"
 	"strings"
-
-	"github.com/Lucas-884e/gonet/util"
 )
 
 func NewNode(v float64, name string) *Node {
@@ -76,9 +74,8 @@ func (n *Node) G() float64 {
 	return n.g
 }
 
-func (n *Node) Learn(lrFn util.LearningRateFunc) float64 {
-	n.v -= lrFn(n.g)
-	return n.g * n.g
+func (n *Node) Learn(delta float64) {
+	n.v -= delta
 }
 
 func (n *Node) Forward() {
