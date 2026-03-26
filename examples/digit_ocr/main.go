@@ -12,7 +12,7 @@ import (
 
 var (
 	dataset  = flag.String("ds", "sklearn", "Dataset name.")
-	useGraph = flag.Bool("g", false, "use Computational-Graph approach")
+	useArray = flag.Bool("arr", false, "use array-based approach")
 )
 
 func main() {
@@ -67,9 +67,9 @@ func main() {
 		}
 	}
 
-	train := nonGraphTrain
-	if *useGraph {
-		train = graphTrain
+	train := graphTrain
+	if *useArray {
+		train = nonGraphTrain
 	}
 
 	start := time.Now()

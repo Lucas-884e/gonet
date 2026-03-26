@@ -12,7 +12,7 @@ import (
 
 var (
 	data     = flag.String("i", "data/data.csv", "Input data file name")
-	useGraph = flag.Bool("g", false, "use Computational-Graph approach")
+	useArray = flag.Bool("arr", false, "use array-based approach")
 )
 
 func main() {
@@ -31,9 +31,9 @@ func main() {
 	util.ShuffleSamples(samples)
 
 	trainingSet, validationSet, testSet := util.SplitDataSet(samples)
-	train := nonGraphTrain
-	if *useGraph {
-		train = graphTrain
+	train := graphTrain
+	if *useArray {
+		train = nonGraphTrain
 	}
 
 	start := time.Now()

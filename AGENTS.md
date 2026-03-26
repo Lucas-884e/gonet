@@ -30,10 +30,10 @@ gofmt -w .
 Run examples (from repo root):
 
 ```
-go run ./examples/binary_classifier -i data/data.csv
-go run ./examples/binary_classifier -i data/data.csv -g   # computational graph mode
-go run ./examples/digit_ocr -ds sklearn
-go run ./examples/digit_ocr -ds sklearn -g                 # computational graph mode
+go run ./examples/binary_classifier -i data/data.csv       # computational graph mode
+go run ./examples/binary_classifier -i data/data.csv -arr  # array implementation mode
+go run ./examples/digit_ocr -ds sklearn                    # computational graph mode
+go run ./examples/digit_ocr -ds sklearn -arr               # array implementation mode
 ```
 
 ## Architecture
