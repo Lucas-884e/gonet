@@ -9,22 +9,26 @@ gonet is a neural network library written in Go. It provides two independent imp
 ## Build and Test Commands
 
 Run all tests:
+
 ```
 go test ./...
 ```
 
 Run a single test:
+
 ```
-go test -run TestFCNNet ./
-go test -run TestMLP ./graph/
+go test -run TestMLP ./
+go test -run TestFCNNet ./arrimpl/
 ```
 
 Format code:
+
 ```
 gofmt -w .
 ```
 
 Run examples (from repo root):
+
 ```
 go run ./examples/binary_classifier -i data/data.csv
 go run ./examples/binary_classifier -i data/data.csv -g   # computational graph mode
@@ -32,17 +36,15 @@ go run ./examples/digit_ocr -ds sklearn
 go run ./examples/digit_ocr -ds sklearn -g                 # computational graph mode
 ```
 
-There is also a Bazel-based build (`build.sh`) that requires `BAZEL_CACHE` env var and network access via `goproxy.io`.
-
 ## Architecture
 
 ### Two Parallel NN Implementations
 
 The library has two completely separate neural network implementations that share only the `util` package:
 
-1. **Root package (`gonet`)** — Array-based FCNNet. Neurons store weights as `[]Weight` structs with explicit indices. Forward/backward propagation is done via manual matrix-style loops across layers. The `Trainer` type handles the training loop with epoch/batch iteration.
+1. **Root package (`gonet`)** — Computational graph with autograd. Each `Node` carries closure-based `forward` and `backward` functions. Calling `node.Backward()` performs topological sort then reverse-order gradient propagation through the graph. The `MLP` type builds a graph of nodes when `Feed()` is called, and `Learn()` updates all weight nodes.
 
-2. **`graph` package** — Computational graph with autograd. Each `Node` carries closure-based `forward` and `backward` functions. Calling `node.Backward()` performs topological sort then reverse-order gradient propagation through the graph. The `MLP` type builds a graph of nodes when `Feed()` is called, and `Learn()` updates all weight nodes.
+2. **`arrimpl` package** — Array-based FCNNet. Neurons store weights as `[]Weight` structs with explicit indices. Forward/backward propagation is done via manual matrix-style loops across layers. The `Trainer` type handles the training loop with epoch/batch iteration.
 
 ### Key Design Details
 
@@ -61,12 +63,12 @@ The library has two completely separate neural network implementations that shar
 ### Package Dependencies
 
 ```
-examples/ → gonet (root), graph, util
+examples/ → gonet (root), arrimpl, util
 gonet (root) → util
-graph → util
+arrimpl → util
 util → (no internal deps)
 ```
 
 ### Testing
 
-Tests use `github.com/stretchr/testify`. The test in `fcnn_test.go` manually computes expected forward/backward values with hand-set weights. Graph tests (`graph/*_test.go`) verify node values and gradients through the autograd system.
+Tests use `github.com/stretchr/testify`. The test in `arrimpl/fcnn_test.go` manually computes expected forward/backward values with hand-set weights. Graph tests (`./*_test.go`) verify node values and gradients through the autograd system.
