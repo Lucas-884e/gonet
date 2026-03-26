@@ -3,8 +3,8 @@ package main
 import (
 	"log"
 
+	"github.com/Lucas-884e/gonet"
 	"github.com/Lucas-884e/gonet/arrimpl"
-	"github.com/Lucas-884e/gonet/graph"
 	"github.com/Lucas-884e/gonet/util"
 )
 
@@ -38,19 +38,19 @@ func nonGraphTrain(trainingSet, validationSet, testSet []util.Sample) {
 	log.Println("(After training) Test set prediction precision:", tr.PredictionPrecision(testSet))
 }
 
-func constructGraphNetwork(hiddenLayerSizes ...int) *graph.MLP {
-	mlp := graph.NewMLP(2)
+func constructGraphNetwork(hiddenLayerSizes ...int) *gonet.MLP {
+	mlp := gonet.NewMLP(2)
 	for _, size := range hiddenLayerSizes {
-		mlp.AddLayer(size, graph.OpRelu, true)
+		mlp.AddLayer(size, gonet.OpRelu, true)
 	}
-	mlp.AddLayer(1, graph.OpNone, true)
+	mlp.AddLayer(1, gonet.OpNone, true)
 	return mlp
 }
 
 func graphTrain(trainingSet, validationSet, testSet []util.Sample) {
 	var (
 		mlp       = constructGraphNetwork(8)
-		lossFn    = graph.ModelLossFunc(mlp, graph.MaxMarginLoss)
+		lossFn    = gonet.ModelLossFunc(mlp, gonet.MaxMarginLoss)
 		isCorrect = func(pred, actual []float64) bool { return pred[0]*actual[0] > 0 }
 		tsSize    = len(trainingSet)
 		delta     float64
@@ -66,7 +66,7 @@ func graphTrain(trainingSet, validationSet, testSet []util.Sample) {
 			StopEps:      0,
 			LearningRate: 0.03,
 		}
-		batchInput = graph.NewSampleBatch(2, 1, cfg.BatchSize)
+		batchInput = gonet.NewSampleBatch(2, 1, cfg.BatchSize)
 		loss       = lossFn(batchInput)
 		optimizer  = util.NewDefaultAdamOptimizer(mlp.Parameters(), cfg.LearningRate)
 	)
@@ -96,12 +96,12 @@ train:
 	// fmt.Println(mlp)
 }
 
-func PredictionPrecision(model *graph.MLP, dataset []util.Sample, isCorrect util.IsCorrectFunc) float32 {
+func PredictionPrecision(model *gonet.MLP, dataset []util.Sample, isCorrect util.IsCorrectFunc) float32 {
 	var (
 		correctCount int
-		input        = []*graph.Node{
-			graph.NewInputNode(0, "X1"),
-			graph.NewInputNode(0, "X2"),
+		input        = []*gonet.Node{
+			gonet.NewInputNode(0, "X1"),
+			gonet.NewInputNode(0, "X2"),
 		}
 		predicted = model.Feed(input)
 	)
@@ -110,7 +110,7 @@ func PredictionPrecision(model *graph.MLP, dataset []util.Sample, isCorrect util
 			input[i].SetV(x)
 		}
 		predicted[0].Forward()
-		if isCorrect(graph.NodeValues(predicted), sample.Y) {
+		if isCorrect(gonet.NodeValues(predicted), sample.Y) {
 			correctCount++
 		}
 	}

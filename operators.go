@@ -1,4 +1,4 @@
-package graph
+package gonet
 
 //go:generate stringer -type=Operator
 type Operator int32

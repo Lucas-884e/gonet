@@ -6,7 +6,7 @@ import (
 	"log"
 	"strings"
 
-	"github.com/Lucas-884e/gonet/graph"
+	"github.com/Lucas-884e/gonet"
 	"github.com/Lucas-884e/gonet/util"
 )
 
@@ -70,9 +70,9 @@ func (emb Embedding) String() string {
 
 func trainWordEmbedding(samples []util.Sample, dim int) [][2]Embedding {
 	vocabSize := len(samples[0].X)
-	mlp := graph.NewMLP(vocabSize)
-	mlp.AddLayer(dim, graph.OpNone, false)
-	mlp.AddLayer(vocabSize, graph.OpSoftmax, false)
+	mlp := gonet.NewMLP(vocabSize)
+	mlp.AddLayer(dim, gonet.OpNone, false)
+	mlp.AddLayer(vocabSize, gonet.OpSoftmax, false)
 	// fmt.Println(mlp)
 	log.Printf("Prediction precision before training: %g", PredictionPrecision(mlp, samples))
 
@@ -83,8 +83,8 @@ func trainWordEmbedding(samples []util.Sample, dim int) [][2]Embedding {
 			StopEps:      1e-12,
 			LearningRate: 0.1,
 		}
-		batchInput = graph.NewSampleBatch(vocabSize, vocabSize, cfg.BatchSize)
-		lossFn     = graph.ModelLossFunc(mlp, graph.CrossEntropyLoss)
+		batchInput = gonet.NewSampleBatch(vocabSize, vocabSize, cfg.BatchSize)
+		lossFn     = gonet.ModelLossFunc(mlp, gonet.CrossEntropyLoss)
 		loss       = lossFn(batchInput)
 		optimizer  = util.NewDefaultAdamOptimizer(mlp.Parameters(), cfg.LearningRate)
 		delta      float64
@@ -113,7 +113,7 @@ train:
 	return wordEmbeddings(mlp, vocabSize, dim)
 }
 
-func wordEmbeddings(model *graph.MLP, vocabSize, dimension int) [][2]Embedding {
+func wordEmbeddings(model *gonet.MLP, vocabSize, dimension int) [][2]Embedding {
 	layers := model.L()
 	l1, l2 := layers[0], layers[1]
 
@@ -213,10 +213,10 @@ func oneHot(idx, vocabSize int) []float64 {
 	return v
 }
 
-func PredictionPrecision(model *graph.MLP, testSet []util.Sample) float32 {
+func PredictionPrecision(model *gonet.MLP, testSet []util.Sample) float32 {
 	var (
 		correctCount int
-		input        = graph.NewInputNodeBatch(len(testSet[0].X), "X_%d")
+		input        = gonet.NewInputNodeBatch(len(testSet[0].X), "X_%d")
 		predicted    = model.Feed(input)
 	)
 	for _, sample := range testSet {
@@ -226,7 +226,7 @@ func PredictionPrecision(model *graph.MLP, testSet []util.Sample) float32 {
 		for _, pred := range predicted {
 			pred.Forward()
 		}
-		if isCorrect(graph.NodeValues(predicted), sample.Y) {
+		if isCorrect(gonet.NodeValues(predicted), sample.Y) {
 			correctCount++
 		}
 	}
