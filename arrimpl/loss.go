@@ -1,4 +1,4 @@
-package gonet
+package arrimpl
 
 type LossFunction string
 

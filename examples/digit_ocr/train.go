@@ -4,24 +4,24 @@ import (
 	"fmt"
 	"log"
 
-	"github.com/Lucas-884e/gonet"
+	"github.com/Lucas-884e/gonet/arrimpl"
 	"github.com/Lucas-884e/gonet/graph"
 	"github.com/Lucas-884e/gonet/util"
 )
 
-func constructNonGraphNetwork(inputLayerSize int, hiddenLayerSizes ...int) *gonet.FCNNet {
-	nn := gonet.NewFCNNet(inputLayerSize, gonet.LossCrossEntropy, gonet.ReluActivator())
+func constructNonGraphNetwork(inputLayerSize int, hiddenLayerSizes ...int) *arrimpl.FCNNet {
+	nn := arrimpl.NewFCNNet(inputLayerSize, arrimpl.LossCrossEntropy, arrimpl.ReluActivator())
 	for _, size := range hiddenLayerSizes {
 		nn.AddLayer(size)
 	}
-	nn.AddLayerWithActivator(10, gonet.SoftmaxActivator(1))
+	nn.AddLayerWithActivator(10, arrimpl.SoftmaxActivator(1))
 	nn.RandomizeInitialWeights()
 	return nn
 }
 
 func nonGraphTrain(trainingSet, validationSet, testSet []util.Sample) {
 	nn := constructNonGraphNetwork(len(trainingSet[0].X), 32, 16)
-	tr := gonet.NewTrainer(nn, isCorrect)
+	tr := arrimpl.NewTrainer(nn, isCorrect)
 	log.Printf("(Before training) Prediction precision: validation set = %g | testing set = %g",
 		tr.PredictionPrecision(validationSet), tr.PredictionPrecision(testSet))
 

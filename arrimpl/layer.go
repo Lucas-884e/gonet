@@ -1,4 +1,4 @@
-package gonet
+package arrimpl
 
 // Layer implements the layer structure in a neural network.
 type Layer struct {
