@@ -2,6 +2,7 @@ package arrimpl
 
 import (
 	"math"
+	"slices"
 )
 
 const (
@@ -134,10 +135,13 @@ type softmaxActivator struct {
 }
 
 func (a softmaxActivator) A(xs []float64) []float64 {
-	var sum float64
-	ys := make([]float64, len(xs))
+	var (
+		sum  float64
+		ys   = make([]float64, len(xs))
+		xmax = slices.Max(xs)
+	)
 	for i, x := range xs {
-		ys[i] = math.Exp(x / a.t)
+		ys[i] = math.Exp((x - xmax) / a.t)
 		sum += ys[i]
 	}
 	for i, y := range ys {
