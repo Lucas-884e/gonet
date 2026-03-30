@@ -19,13 +19,13 @@ func main() {
 	flag.Parse()
 
 	sentences := tokenize(corpus)
-	vocab := genVocab(sentences)
-	idxToToken := getIndexToToken(vocab)
+	vocab := util.GenVocabFromCorpus(sentences, "<EOS>")
+	idxToToken := util.GetIndexToToken(vocab)
 	vocabSize := len(vocab)
 
-	indices := sentencesToTokenIndices(sentences, vocab)
-	inputs, labels := genInputsAndLabels(indices)
-	samples := genDataset(inputs, labels, vocabSize)
+	indices := util.CorpusToTokenIndexSequences(sentences, vocab)
+	inputs, labels := util.GenInputsAndLabelsFromTokenIndexSequence(indices, eosIdx)
+	samples := util.GenDatasetFromInputsAndLabels(inputs, labels, vocabSize)
 	embeddings := trainWordEmbedding(samples, 2)
 
 	fmt.Println()
@@ -40,8 +40,11 @@ func main() {
 	for i, embedding := range embeddings {
 		log.Printf("%10s | %s | %s", idxToToken[i], embedding[0], embedding[1])
 	}
-	diff1 := embeddings[1][0].Sub(embeddings[4][0])
-	diff2 := embeddings[1][1].Sub(embeddings[4][1])
+
+	godzillaIndex := vocab["Godzilla"]
+	ironmanIndex := vocab["Ironman"]
+	diff1 := embeddings[godzillaIndex][0].Sub(embeddings[ironmanIndex][0])
+	diff2 := embeddings[godzillaIndex][1].Sub(embeddings[ironmanIndex][1])
 	log.Printf("(%s - %s) = %s | %s", idxToToken[1], idxToToken[4], diff1, diff2)
 }
 
@@ -98,7 +101,7 @@ train:
 			loss.Backward()
 
 			if delta = optimizer.Learn(); delta < cfg.StopEps && loss.V() < cfg.StopEps {
-				log.Printf("* Reached stopping criterion (delta = %g | loss=%g | epsilon=%g).", delta, loss.V(), cfg.StopEps)
+				log.Printf("* Reached stopping criterion (delta = %g | loss=%g < epsilon=%g).", delta, loss.V(), cfg.StopEps)
 				break train
 			}
 		}
@@ -143,74 +146,6 @@ func tokenize(corpus string) (sentences [][]string) {
 		sentences = append(sentences, strings.Fields(line))
 	}
 	return
-}
-
-func genVocab(sentences [][]string) map[string]int {
-	var (
-		vocab = map[string]int{"<EOS>": eosIdx}
-		size  = 1
-	)
-	for _, sen := range sentences {
-		for _, token := range sen {
-			if _, ok := vocab[token]; !ok {
-				vocab[token] = size
-				size++
-			}
-		}
-	}
-	return vocab
-}
-
-func getIndexToToken(vocab map[string]int) map[int]string {
-	m := make(map[int]string, len(vocab))
-	for token, idx := range vocab {
-		m[idx] = token
-	}
-	return m
-}
-
-func sentencesToTokenIndices(sentences [][]string, vocab map[string]int) (indices []int) {
-	for _, sen := range sentences {
-		for _, token := range sen {
-			idx, ok := vocab[token]
-			if !ok {
-				panic("Token '" + token + "' not in vocabulary")
-			}
-			indices = append(indices, idx)
-		}
-		indices = append(indices, 0)
-	}
-	return
-}
-
-func genInputsAndLabels(tokenIndices []int) ([]int, []int) {
-	var (
-		inputs = make([]int, 0, len(tokenIndices))
-		labels = make([]int, 0, len(tokenIndices))
-	)
-	for i, idx := range tokenIndices {
-		if idx == eosIdx {
-			continue
-		}
-		inputs = append(inputs, idx)
-		labels = append(labels, tokenIndices[i+1])
-	}
-	return inputs, labels
-}
-
-func genDataset(inputs, labels []int, vocabSize int) (samples []util.Sample) {
-	for i, input := range inputs {
-		x := oneHot(input, vocabSize)
-		y := oneHot(labels[i], vocabSize)
-		samples = append(samples, util.Sample{X: x, Y: y})
-	}
-	return
-}
-
-func oneHot(idx, vocabSize int) []float64 {
-	v := make([]float64, vocabSize)
-	v[idx] = 1.0
-	return v
 }
 
 func PredictionPrecision(model *gonet.MLP, testSet []util.Sample) float32 {
