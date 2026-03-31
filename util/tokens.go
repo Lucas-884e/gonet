@@ -2,7 +2,11 @@ package util
 
 import "slices"
 
-func GenVocabFromCorpus[T ~string | byte](corpus [][]T, eos T) map[T]int {
+type TokenType interface {
+	~string | byte
+}
+
+func GenVocabFromCorpus[T TokenType](corpus [][]T, eos T) map[T]int {
 	tokenSet := make(map[T]struct{})
 	for _, seq := range corpus {
 		for _, token := range seq {
@@ -25,7 +29,7 @@ func GenVocabFromCorpus[T ~string | byte](corpus [][]T, eos T) map[T]int {
 	return vocab
 }
 
-func GetIndexToToken[T ~string | byte](vocab map[T]int) []T {
+func GetIndexToToken[T TokenType](vocab map[T]int) []T {
 	m := make([]T, len(vocab))
 	for token, idx := range vocab {
 		m[idx] = token
@@ -33,7 +37,7 @@ func GetIndexToToken[T ~string | byte](vocab map[T]int) []T {
 	return m
 }
 
-func CorpusToTokenIndexSequences[T ~string | byte](corpus [][]T, vocab map[T]int) (indexes []int) {
+func CorpusToTokenIndexSequences[T TokenType](corpus [][]T, vocab map[T]int) (indexes []int) {
 	for _, seq := range corpus {
 		for _, token := range seq {
 			idx, ok := vocab[token]

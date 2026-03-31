@@ -67,7 +67,7 @@ func graphTrain(trainingSet, validationSet, testSet []util.Sample) {
 		}
 		batchInput = gonet.NewSampleBatch(inputLayerSize, 10, cfg.BatchSize)
 		loss       = lossFn(batchInput)
-		optimizer  = util.NewDefaultAdamOptimizer(mlp.Parameters(), cfg.LearningRate)
+		optimizer  = util.DefaultAdamOptimizer(mlp.Parameters(), cfg.LearningRate)
 	)
 train:
 	for ep := 0; ep < cfg.Epochs; ep++ {
@@ -79,7 +79,6 @@ train:
 			loss.Backward()
 
 			if delta = optimizer.Learn(); delta < cfg.StopEps {
-				// if delta = mlp.Learn(optimizer.LearningRate); delta < cfg.StopEps {
 				log.Printf("* Reached stopping criterion (delta = %g < %g).", delta, cfg.StopEps)
 				break train
 			}

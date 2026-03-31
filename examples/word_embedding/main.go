@@ -89,7 +89,7 @@ func trainWordEmbedding(samples []util.Sample, dim int) [][2]Embedding {
 		batchInput = gonet.NewSampleBatch(vocabSize, vocabSize, cfg.BatchSize)
 		lossFn     = gonet.ModelLossFunc(mlp, gonet.CrossEntropyLoss)
 		loss       = lossFn(batchInput)
-		optimizer  = util.NewDefaultAdamOptimizer(mlp.Parameters(), cfg.LearningRate)
+		optimizer  = util.DefaultAdamOptimizer(mlp.Parameters(), cfg.LearningRate)
 		delta      float64
 	)
 

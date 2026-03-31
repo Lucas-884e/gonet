@@ -26,7 +26,7 @@ func TestDefaultAdamLearningRateFunc(t *testing.T) {
 	var (
 		p = NewParam(10.0)
 		// g   = func(v float64) float64 { return 2 * v }
-		opt = NewDefaultAdamOptimizer([]Parameter{p}, 1.05)
+		opt = DefaultAdamOptimizer([]Parameter{p}, 1.05)
 
 		expect = []float64{8.950, 7.904, 6.867, 5.843, 4.838}
 	)

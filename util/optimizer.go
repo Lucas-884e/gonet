@@ -23,21 +23,33 @@ func AnnealingLearningRateFunc(eta, decay float64, epoch int) LearningRateFunc {
 	}
 }
 
-type AdamOptimizer struct {
-	params  []Parameter
-	eta     float64
-	beta1   float64
-	beta2   float64
-	epsilon float64
-
-	beta1t float64
-	beta2t float64
-	m      []float64 // momentum
-	v      []float64 // velocity
+type Optimizer interface {
+	Learn() float64
 }
 
-func NewAdamOptimizer(params []Parameter, eta, beta1, beta2, epsilon float64) *AdamOptimizer {
-	return &AdamOptimizer{
+func SGDOptimizer(params []Parameter, eta float64) Optimizer {
+	return &sgdOptimizer{
+		params: params,
+		eta:    eta,
+	}
+}
+
+type sgdOptimizer struct {
+	params []Parameter
+	eta    float64
+}
+
+func (so *sgdOptimizer) Learn() (diff float64) {
+	for _, p := range so.params {
+		delta := so.eta * p.G()
+		p.Learn(delta)
+		diff += delta * delta
+	}
+	return diff
+}
+
+func AdamOptimizer(params []Parameter, eta, beta1, beta2, epsilon float64) Optimizer {
+	return &adamOptimizer{
 		params:  params,
 		eta:     eta,
 		beta1:   beta1,
@@ -50,15 +62,27 @@ func NewAdamOptimizer(params []Parameter, eta, beta1, beta2, epsilon float64) *A
 	}
 }
 
-func NewDefaultAdamOptimizer(params []Parameter, eta float64) *AdamOptimizer {
-	return NewAdamOptimizer(params, eta, 0.9, 0.999, 1e-8)
+func DefaultAdamOptimizer(params []Parameter, eta float64) Optimizer {
+	return AdamOptimizer(params, eta, 0.9, 0.999, 1e-8)
 }
 
-func (ao *AdamOptimizer) Learn() float64 {
+type adamOptimizer struct {
+	params  []Parameter
+	eta     float64
+	beta1   float64
+	beta2   float64
+	epsilon float64
+
+	beta1t float64
+	beta2t float64
+	m      []float64 // momentum
+	v      []float64 // velocity
+}
+
+func (ao *adamOptimizer) Learn() (diff float64) {
 	ao.beta1t *= ao.beta1
 	ao.beta2t *= ao.beta2
 
-	var diff float64
 	for i, p := range ao.params {
 		delta := ao.learningRate(i, p.G())
 		p.Learn(delta)
@@ -67,7 +91,7 @@ func (ao *AdamOptimizer) Learn() float64 {
 	return diff
 }
 
-func (ao *AdamOptimizer) learningRate(i int, g float64) float64 {
+func (ao *adamOptimizer) learningRate(i int, g float64) float64 {
 	ao.m[i] = ao.beta1*ao.m[i] + (1-ao.beta1)*g
 	ao.v[i] = ao.beta2*ao.v[i] + (1-ao.beta2)*g*g
 
