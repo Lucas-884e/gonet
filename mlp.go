@@ -181,6 +181,18 @@ func (mlp *MLP) Parameters() (p []util.Parameter) {
 	return
 }
 
+func (mlp *MLP) Output(input []float64) []float64 {
+	xs := NewInputNodeBatch(len(input), "X_%d")
+	for i, n := range xs {
+		n.SetV(input[i])
+	}
+	ys := mlp.Feed(xs)
+	for _, y := range ys {
+		y.Forward()
+	}
+	return NodeValues(ys)
+}
+
 func (mlp *MLP) LoadWeights(ws [][][]float64) {
 	for i, l := range mlp.layers {
 		l.LoadWeights(ws[i])

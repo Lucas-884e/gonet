@@ -10,8 +10,6 @@ import (
 	"github.com/Lucas-884e/gonet/util"
 )
 
-const eosIdx = 0
-
 var corpus = `Godzilla is great
 Ironman is great`
 
@@ -23,8 +21,8 @@ func main() {
 	idxToToken := util.GetIndexToToken(vocab)
 	vocabSize := len(vocab)
 
-	indices := util.CorpusToTokenIndexSequences(sentences, vocab)
-	inputs, labels := util.GenInputsAndLabelsFromTokenIndexSequence(indices, eosIdx)
+	indices := util.CorpusToTokenIndexSequences(sentences, vocab, false)
+	inputs, labels := util.GenInputsAndLabelsFromTokenIndexSequence(indices)
 	samples := util.GenDatasetFromInputsAndLabels(inputs, labels, vocabSize)
 	embeddings := trainWordEmbedding(samples, 2)
 

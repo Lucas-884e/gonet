@@ -1,9 +1,12 @@
 package util
 
-import "math"
+import (
+	"math"
+)
 
 type Parameter interface {
 	Learn(delta float64)
+	SetV(float64)
 	G() float64
 }
 
@@ -41,9 +44,9 @@ type sgdOptimizer struct {
 
 func (so *sgdOptimizer) Learn() (diff float64) {
 	for _, p := range so.params {
-		delta := so.eta * p.G()
-		p.Learn(delta)
-		diff += delta * delta
+		g := p.G()
+		p.Learn(so.eta * g)
+		diff += g * g
 	}
 	return diff
 }
@@ -84,9 +87,9 @@ func (ao *adamOptimizer) Learn() (diff float64) {
 	ao.beta2t *= ao.beta2
 
 	for i, p := range ao.params {
-		delta := ao.learningRate(i, p.G())
-		p.Learn(delta)
-		diff += delta * delta
+		g := ao.learningRate(i, p.G())
+		p.Learn(ao.eta * g)
+		diff += g * g
 	}
 	return diff
 }
@@ -97,5 +100,5 @@ func (ao *adamOptimizer) learningRate(i int, g float64) float64 {
 
 	mHat := ao.m[i] / (1 - ao.beta1t)
 	vHat := ao.v[i] / (1 - ao.beta2t)
-	return ao.eta * mHat / (math.Sqrt(vHat) + ao.epsilon)
+	return mHat / (math.Sqrt(vHat) + ao.epsilon)
 }

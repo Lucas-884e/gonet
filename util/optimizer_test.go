@@ -14,6 +14,10 @@ func (p *Param) Learn(d float64) {
 	p.v -= d
 }
 
+func (p *Param) SetV(v float64) {
+	p.v = v
+}
+
 func (p *Param) G() float64 {
 	return 2 * p.v
 }

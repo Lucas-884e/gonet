@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"strconv"
 	"strings"
 	"time"
 
@@ -30,29 +31,73 @@ func main() {
 	c2i := util.GenVocabFromCorpus(corpus, '.')
 	i2c := util.GetIndexToToken(c2i)
 	vocabSize := len(c2i)
-	log.Printf("Vocabulary size: %d", vocabSize)
-	for _, char := range i2c {
-		fmt.Printf("%c", char)
-	}
-	fmt.Println()
+	log.Printf("Vocabulary (size=%d): %c", vocabSize, i2c)
 
-	indices := util.CorpusToTokenIndexSequences(corpus, c2i)
-	inputs, labels := util.GenInputsAndLabelsFromTokenIndexSequence(indices, c2i['.'])
+	indices := util.CorpusToTokenIndexSequences(corpus, c2i, true)
+	inputs, labels := util.GenInputsAndLabelsFromTokenIndexSequence(indices)
 	samples := util.GenDatasetFromInputsAndLabels(inputs, labels, vocabSize)
 
 	var (
-		mlp = constructMLP(vocabSize)
-		cfg = util.TrainConfig{
-			BatchSize:    500,
-			Epochs:       20,
-			StopEps:      1e-6,
-			LearningRate: 0.3,
-		}
-		start = time.Now()
+		mlp  = constructMLP(vocabSize)
+		pmat = buildProbMatrix(mlp, vocabSize)
 	)
-	util.ShuffleSamples(samples)
-	trainBigramModel(mlp, samples, cfg)
-	log.Printf("Training time cost: %s", time.Since(start))
+	for i := range 20 {
+		fmt.Printf("[Before training] Generate name (%d): %s\n", i+1, genName(i2c, pmat))
+	}
+
+	var (
+		reader = bufio.NewReader(os.Stdin)
+		cfg    = util.TrainConfig{
+			BatchSize:    min(1000, len(samples)),
+			Epochs:       10,
+			StopEps:      1e-8,
+			LearningRate: 0.1,
+		}
+	)
+training:
+	for start := time.Now(); ; start = time.Now() {
+		// util.ShuffleSamples(samples)
+		trainBigramModel(mlp, samples, cfg)
+		log.Printf("Training time cost: %s", time.Since(start))
+
+		pmat = buildProbMatrix(mlp, vocabSize)
+		log.Printf("[During training] Probability matrix: %s", formatProbMatrix(pmat))
+
+		fmt.Println("Continue training?\n  (q, quit, exit) exit;\n  (float integer) learning_rate -> float, training epochs -> integer;\n  (otherwise) continue.")
+		input, err := reader.ReadString('\n')
+		if err != nil {
+			log.Fatalf("Read input error: %v", err)
+		}
+		switch input = strings.TrimSpace(input); input {
+		case "q", "quit", "exit":
+			break training
+		default:
+			// Input format:
+			// (Case 1) 1.5
+			// - Change learning rate to 1.5
+			// (Case 2) 1.5 500
+			// - Change learning rate to 1.5 and epochs to 500
+			fields := strings.Fields(input)
+			if len(fields) > 0 {
+				if lr, err := strconv.ParseFloat(fields[0], 64); err == nil {
+					cfg.LearningRate = lr
+					fmt.Printf("Learning rate changed to: %g\n", lr)
+				}
+			}
+			if len(fields) > 1 {
+				if ep, err := strconv.Atoi(fields[1]); err == nil {
+					cfg.Epochs = ep
+					fmt.Printf("Training epochs changed to: %d\n", ep)
+				}
+			}
+		}
+	}
+
+	pmat = buildProbMatrix(mlp, vocabSize)
+	fmt.Printf("[After training] Probability matrix: %s\n", formatProbMatrix(pmat))
+	for i := range 20 {
+		fmt.Printf("[After training] Generate name (%d): %s\n", i+1, genName(i2c, pmat))
+	}
 }
 
 func constructMLP(vocabSize int) *gonet.MLP {
@@ -63,7 +108,8 @@ func constructMLP(vocabSize int) *gonet.MLP {
 
 func trainBigramModel(mlp *gonet.MLP, samples []util.Sample, cfg util.TrainConfig) {
 	// Don't do evaluation on the entire dataset, it will eat all your memory.
-	const nSamples = 10000
+	nSamples := min(10000, len(samples))
+
 	var (
 		delta                 float64
 		vocabSize             = len(samples[0].X)
@@ -76,22 +122,17 @@ func trainBigramModel(mlp *gonet.MLP, samples []util.Sample, cfg util.TrainConfi
 	// Evaluation before training.
 	input.Update(samples[:nSamples])
 	loss.Forward()
-	log.Printf("[After training] total loss: %g", loss.V())
+	log.Printf("[Before training] total loss: %g", loss.V())
 
-train:
 	for ep := 0; ep < cfg.Epochs; ep++ {
 		for start := 0; start < len(samples); start += cfg.BatchSize {
 			end := min(start+cfg.BatchSize, len(samples))
 			batchInput.Update(samples[start:end])
 			batchLoss.Backward()
-
-			if delta = optimizer.Learn(); delta < cfg.StopEps && batchLoss.V() < cfg.StopEps {
-				log.Printf("* Reached stopping criterion (delta = %g | loss=%g < epsilon=%g).", delta, batchLoss.V(), cfg.StopEps)
-				break train
-			}
+			delta = optimizer.Learn()
 		}
 
-		if ep%5 == 0 || ep+1 == cfg.Epochs {
+		if ep%10 == 0 || ep+1 == cfg.Epochs {
 			log.Printf("[Epoch=%d] Gradient descent delta=%g | loss=%g", ep, delta, batchLoss.V())
 		}
 	}
@@ -105,4 +146,36 @@ func buildLoss(mlp *gonet.MLP, vocabSize, inputSize int) (input gonet.SampleBatc
 	input = gonet.NewSampleBatch(vocabSize, vocabSize, inputSize)
 	loss = gonet.ModelLossFunc(mlp, gonet.CrossEntropyLoss)(input)
 	return
+}
+
+func buildProbMatrix(mlp *gonet.MLP, vocabSize int) (mat [][]float64) {
+	for idx := range vocabSize {
+		mat = append(mat, mlp.Output(util.OneHot(idx, vocabSize)))
+	}
+	return
+}
+
+func genName(i2c []byte, probMat [][]float64) string {
+	var (
+		idx int
+		seq []byte
+	)
+	for {
+		idx = util.RandMultinomial(probMat[idx])
+		if idx == 0 {
+			return string(seq)
+		}
+		seq = append(seq, i2c[idx])
+	}
+}
+
+func formatProbMatrix(pmat [][]float64) string {
+	sb := new(strings.Builder)
+	for _, ps := range pmat {
+		sb.WriteString("\n  ")
+		for _, p := range ps {
+			fmt.Fprintf(sb, " %.4f", p)
+		}
+	}
+	return sb.String()
 }

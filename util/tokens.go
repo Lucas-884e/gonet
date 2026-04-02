@@ -37,7 +37,10 @@ func GetIndexToToken[T TokenType](vocab map[T]int) []T {
 	return m
 }
 
-func CorpusToTokenIndexSequences[T TokenType](corpus [][]T, vocab map[T]int) (indexes []int) {
+func CorpusToTokenIndexSequences[T TokenType](corpus [][]T, vocab map[T]int, withSoS bool) (indexes []int) {
+	if withSoS {
+		indexes = append(indexes, 0)
+	}
 	for _, seq := range corpus {
 		for _, token := range seq {
 			idx, ok := vocab[token]
@@ -51,13 +54,18 @@ func CorpusToTokenIndexSequences[T TokenType](corpus [][]T, vocab map[T]int) (in
 	return
 }
 
-func GenInputsAndLabelsFromTokenIndexSequence(indexes []int, eosIndex int) ([]int, []int) {
+func GenInputsAndLabelsFromTokenIndexSequence(indexes []int) ([]int, []int) {
 	var (
-		inputs = make([]int, 0, len(indexes))
-		labels = make([]int, 0, len(indexes))
+		endIdx  = len(indexes) - 1
+		inputs  = make([]int, 0, endIdx)
+		labels  = make([]int, 0, endIdx)
+		withSoS bool
 	)
+	if indexes[0] == 0 {
+		withSoS = true
+	}
 	for i, idx := range indexes {
-		if idx == eosIndex {
+		if idx == 0 && (i == endIdx || !withSoS) {
 			continue
 		}
 		inputs = append(inputs, idx)
