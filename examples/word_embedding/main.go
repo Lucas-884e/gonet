@@ -21,9 +21,8 @@ func main() {
 	idxToToken := util.GetIndexToToken(vocab)
 	vocabSize := len(vocab)
 
-	indices := util.CorpusToTokenIndexSequences(sentences, vocab, false)
-	inputs, labels := util.GenInputsAndLabelsFromTokenIndexSequence(indices)
-	samples := util.GenDatasetFromInputsAndLabels(inputs, labels, vocabSize)
+	inputs, labels := util.GenInputsAndLabelsFromCorpus(sentences, vocab, 1)
+	samples := util.GenDatasetFromInputsAndLabels(inputs, labels, 1, vocabSize)
 	embeddings := trainWordEmbedding(samples, 2)
 
 	fmt.Println()
@@ -82,7 +81,7 @@ func trainWordEmbedding(samples []util.Sample, dim int) [][2]Embedding {
 			BatchSize:    1,
 			Epochs:       50000,
 			StopEps:      1e-12,
-			LearningRate: 0.1,
+			LearningRate: 0.01,
 		}
 		batchInput = gonet.NewSampleBatch(vocabSize, vocabSize, cfg.BatchSize)
 		lossFn     = gonet.ModelLossFunc(mlp, gonet.CrossEntropyLoss)

@@ -37,39 +37,24 @@ func GetIndexToToken[T TokenType](vocab map[T]int) []T {
 	return m
 }
 
-func CorpusToTokenIndexSequences[T TokenType](corpus [][]T, vocab map[T]int, withSoS bool) (indexes []int) {
-	if withSoS {
-		indexes = append(indexes, 0)
-	}
+func GenInputsAndLabelsFromCorpus[T TokenType](corpus [][]T, vocab map[T]int, ctxLen int) ([][]int, []int) {
+	var (
+		inputs = make([][]int, 0, len(corpus))
+		labels = make([]int, 0, len(corpus))
+	)
 	for _, seq := range corpus {
+		ctx := make([]int, ctxLen)
 		for _, token := range seq {
 			idx, ok := vocab[token]
 			if !ok {
 				panic("Character '" + string(token) + "' not in alphabet")
 			}
-			indexes = append(indexes, idx)
+			inputs = append(inputs, ctx)
+			labels = append(labels, idx)
+			ctx = append(ctx[1:], idx)
 		}
-		indexes = append(indexes, 0)
-	}
-	return
-}
-
-func GenInputsAndLabelsFromTokenIndexSequence(indexes []int) ([]int, []int) {
-	var (
-		endIdx  = len(indexes) - 1
-		inputs  = make([]int, 0, endIdx)
-		labels  = make([]int, 0, endIdx)
-		withSoS bool
-	)
-	if indexes[0] == 0 {
-		withSoS = true
-	}
-	for i, idx := range indexes {
-		if idx == 0 && (i == endIdx || !withSoS) {
-			continue
-		}
-		inputs = append(inputs, idx)
-		labels = append(labels, indexes[i+1])
+		inputs = append(inputs, ctx)
+		labels = append(labels, 0)
 	}
 	return inputs, labels
 }
@@ -80,9 +65,17 @@ func OneHot(index, vocabSize int) []float64 {
 	return v
 }
 
-func GenDatasetFromInputsAndLabels(inputs, labels []int, vocabSize int) (samples []Sample) {
+func OneHots(indexes []int, vocabSize int) []float64 {
+	v := make([]float64, 0, vocabSize*len(indexes))
+	for _, idx := range indexes {
+		v = append(v, OneHot(idx, vocabSize)...)
+	}
+	return v
+}
+
+func GenDatasetFromInputsAndLabels(inputs [][]int, labels []int, ctxLen, vocabSize int) (samples []Sample) {
 	for i, input := range inputs {
-		x := OneHot(input, vocabSize)
+		x := OneHots(input, vocabSize)
 		y := OneHot(labels[i], vocabSize)
 		samples = append(samples, Sample{X: x, Y: y})
 	}

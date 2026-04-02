@@ -26,6 +26,8 @@ func main() {
 			corpus = append(corpus, []byte(name))
 		}
 	}
+	// For quick validation.
+	corpus = corpus[:5]
 	log.Printf("Corpus size: %d", len(corpus))
 
 	c2i := util.GenVocabFromCorpus(corpus, '.')
@@ -33,9 +35,9 @@ func main() {
 	vocabSize := len(c2i)
 	log.Printf("Vocabulary (size=%d): %c", vocabSize, i2c)
 
-	indices := util.CorpusToTokenIndexSequences(corpus, c2i, true)
-	inputs, labels := util.GenInputsAndLabelsFromTokenIndexSequence(indices)
-	samples := util.GenDatasetFromInputsAndLabels(inputs, labels, vocabSize)
+	// indices := util.CorpusToTokenIndexSequences(corpus, c2i, 1)
+	inputs, labels := util.GenInputsAndLabelsFromCorpus(corpus, c2i, 1)
+	samples := util.GenDatasetFromInputsAndLabels(inputs, labels, 1, vocabSize)
 
 	var (
 		mlp  = constructMLP(vocabSize)
@@ -51,7 +53,7 @@ func main() {
 			BatchSize:    min(1000, len(samples)),
 			Epochs:       10,
 			StopEps:      1e-8,
-			LearningRate: 0.1,
+			LearningRate: 0.001,
 		}
 	)
 training:
