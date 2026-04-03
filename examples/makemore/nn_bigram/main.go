@@ -11,7 +11,6 @@ import (
 	"time"
 
 	"github.com/Lucas-884e/gonet"
-	"github.com/Lucas-884e/gonet/examples/makemore"
 	"github.com/Lucas-884e/gonet/util"
 )
 
@@ -42,10 +41,10 @@ func main() {
 
 	var (
 		mlp  = constructMLP(vocabSize)
-		pmat = makemore.BuildProbMatrix(mlp, vocabSize)
+		pmat = buildProbMatrix(mlp, vocabSize)
 	)
 	for i := range 20 {
-		fmt.Printf("[Before training] Generate name (%d): %s\n", i+1, makemore.GenName(i2c, pmat))
+		fmt.Printf("[Before training] Generate name (%d): %s\n", i+1, genName(i2c, pmat))
 	}
 
 	var (
@@ -63,8 +62,8 @@ training:
 		trainBigramModel(mlp, samples, cfg)
 		log.Printf("Training time cost: %s", time.Since(start))
 
-		pmat = makemore.BuildProbMatrix(mlp, vocabSize)
-		log.Printf("[During training] Probability matrix: %s", makemore.FormatProbMatrix(pmat))
+		pmat = buildProbMatrix(mlp, vocabSize)
+		log.Printf("[During training] Probability matrix: %s", formatProbMatrix(pmat))
 
 		fmt.Println("Continue training?\n  (q, quit, exit) exit;\n  (float integer) learning_rate -> float, training epochs -> integer;\n  (otherwise) continue.")
 		input, err := reader.ReadString('\n')
@@ -96,10 +95,10 @@ training:
 		}
 	}
 
-	pmat = makemore.BuildProbMatrix(mlp, vocabSize)
-	fmt.Printf("[After training] Probability matrix: %s\n", makemore.FormatProbMatrix(pmat))
+	pmat = buildProbMatrix(mlp, vocabSize)
+	fmt.Printf("[After training] Probability matrix: %s\n", formatProbMatrix(pmat))
 	for i := range 20 {
-		fmt.Printf("[After training] Generate name (%d): %s\n", i+1, makemore.GenName(i2c, pmat))
+		fmt.Printf("[After training] Generate name (%d): %s\n", i+1, genName(i2c, pmat))
 	}
 }
 
@@ -116,8 +115,8 @@ func trainBigramModel(mlp *gonet.MLP, samples []util.Sample, cfg util.TrainConfi
 	var (
 		delta                 float64
 		vocabSize             = len(samples[0].X)
-		input, loss           = makemore.BuildLoss(mlp, vocabSize, nSamples)
-		batchInput, batchLoss = makemore.BuildLoss(mlp, vocabSize, cfg.BatchSize)
+		input, loss           = buildLoss(mlp, vocabSize, nSamples)
+		batchInput, batchLoss = buildLoss(mlp, vocabSize, cfg.BatchSize)
 		// optimizer             = util.SGDOptimizer(mlp.Parameters(), cfg.LearningRate)
 		optimizer = util.DefaultAdamOptimizer(mlp.Parameters(), cfg.LearningRate)
 	)
@@ -143,4 +142,44 @@ func trainBigramModel(mlp *gonet.MLP, samples []util.Sample, cfg util.TrainConfi
 	// Evaluation after training.
 	loss.Forward()
 	log.Printf("[After training] total loss: %g", loss.V())
+}
+
+func genName(i2c []byte, probMat [][]float64) string {
+	var (
+		idx int
+		seq []byte
+	)
+	for {
+		idx = util.RandMultinomial(probMat[idx])
+		if idx == 0 {
+			return string(seq)
+		}
+		seq = append(seq, i2c[idx])
+	}
+}
+
+func buildLoss(mlp *gonet.MLP, vocabSize, inputSize int) (input gonet.SampleBatch, loss *gonet.Node) {
+	input = gonet.NewSampleBatch(vocabSize, vocabSize, inputSize)
+	loss = gonet.ModelLossFunc(mlp, gonet.CrossEntropyLoss)(input)
+	return
+}
+
+func buildProbMatrix(mlp *gonet.MLP, vocabSize int) (mat [][]float64) {
+	for idx := range vocabSize {
+		xs := gonet.NewInputNodeBatch(vocabSize, "X_%d")
+		xs[idx].SetV(1)
+		mat = append(mat, mlp.Output(xs))
+	}
+	return
+}
+
+func formatProbMatrix(pmat [][]float64) string {
+	sb := new(strings.Builder)
+	for _, ps := range pmat {
+		sb.WriteString("\n  ")
+		for _, p := range ps {
+			fmt.Fprintf(sb, " %.4f", p)
+		}
+	}
+	return sb.String()
 }

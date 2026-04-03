@@ -3,49 +3,44 @@ package makemore
 
 import (
 	"fmt"
-	"strings"
 
 	"github.com/Lucas-884e/gonet"
 	"github.com/Lucas-884e/gonet/util"
 )
 
-type ProbModel interface {
-	Output(xs []*gonet.Node) []float64
+type LazyProbModel interface {
+	LazyOutput([]*gonet.Node) func() []float64
 }
 
-func BuildProbMatrix(mlp ProbModel, vocabSize int) (mat [][]float64) {
-	for idx := range vocabSize {
-		xs := gonet.NewInputNodeBatch(vocabSize, "X_%d")
-		xs[idx].SetV(1)
-		mat = append(mat, mlp.Output(xs))
+func LazyProbNext(model LazyProbModel, vocabSize, ctxLen int) func(...int) []float64 {
+	var xs []*gonet.Node
+	for i := range ctxLen {
+		ohe := gonet.NewInputNodeBatch(vocabSize, fmt.Sprintf("X%d_%%d", i))
+		xs = append(xs, ohe...)
 	}
-	return
-}
+	lo := model.LazyOutput(xs)
 
-func FormatProbMatrix(pmat [][]float64) string {
-	sb := new(strings.Builder)
-	for _, ps := range pmat {
-		sb.WriteString("\n  ")
-		for _, p := range ps {
-			fmt.Fprintf(sb, " %.4f", p)
+	return func(ctx ...int) []float64 {
+		for i, idx := range ctx {
+			for j := range vocabSize {
+				if x := xs[i*vocabSize+idx]; j == idx {
+					x.SetV(1)
+				} else {
+					x.SetV(0)
+				}
+			}
 		}
+		return lo()
 	}
-	return sb.String()
 }
 
-func BuildLoss(mlp *gonet.MLP, vocabSize, inputSize int) (input gonet.SampleBatch, loss *gonet.Node) {
-	input = gonet.NewSampleBatch(vocabSize, vocabSize, inputSize)
-	loss = gonet.ModelLossFunc(mlp, gonet.CrossEntropyLoss)(input)
-	return
-}
-
-func GenName(i2c []byte, probMat [][]float64) string {
+func GenName(i2c []byte, pnext func(...int) []float64, ctxLen int) string {
 	var (
-		idx int
 		seq []byte
+		ctx = make([]int, ctxLen)
 	)
 	for {
-		idx = util.RandMultinomial(probMat[idx])
+		idx := util.RandMultinomial(pnext(ctx...))
 		if idx == 0 {
 			return string(seq)
 		}

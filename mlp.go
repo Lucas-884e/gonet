@@ -182,11 +182,17 @@ func (mlp *MLP) Parameters() (p []util.Parameter) {
 }
 
 func (mlp *MLP) Output(xs []*Node) []float64 {
+	return mlp.LazyOutput(xs)()
+}
+
+func (mlp *MLP) LazyOutput(xs []*Node) func() []float64 {
 	ys := mlp.Feed(xs)
-	for _, y := range ys {
-		y.Forward()
+	return func() []float64 {
+		for _, y := range ys {
+			y.Forward()
+		}
+		return NodeValues(ys)
 	}
-	return NodeValues(ys)
 }
 
 func (mlp *MLP) LoadWeights(ws [][][]float64) {
@@ -200,6 +206,10 @@ func (mlp *MLP) RandomizeInitialWeights() {
 		weights := util.GenerateRandomLayerWeights(len(l.neurons), len(l.neurons[0].weights))
 		l.LoadWeights(weights)
 	}
+}
+
+func (mlp *MLP) InputSize() int {
+	return mlp.inputSize
 }
 
 func (mlp *MLP) L() []*Layer {
