@@ -1,6 +1,8 @@
 package util
 
-import "math/rand/v2"
+import (
+	"math/rand/v2"
+)
 
 func ListConvert[S, T any](s []S) []T {
 	t := make([]T, len(s))
@@ -18,9 +20,11 @@ func Must1[T any](x T, err error) T {
 }
 
 func RandMultinomial(probDist []float64) int {
-	var accum float64
+	var (
+		accum float64
+		r     = rand.Float64()
+	)
 	for idx, p := range probDist {
-		r := rand.Float64()
 		if accum += p; r < accum {
 			return idx
 		}

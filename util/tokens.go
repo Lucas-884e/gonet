@@ -37,6 +37,13 @@ func GetIndexToToken[T TokenType](vocab map[T]int) []T {
 	return m
 }
 
+func TokensToIndexes[T TokenType](tokens []T, vocab map[T]int) (indexes []int) {
+	for _, t := range tokens {
+		indexes = append(indexes, vocab[t])
+	}
+	return
+}
+
 func GenInputsAndLabelsFromCorpus[T TokenType](corpus [][]T, vocab map[T]int, ctxLen int) ([][]int, []int) {
 	var (
 		inputs = make([][]int, 0, len(corpus))

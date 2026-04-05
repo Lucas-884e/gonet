@@ -208,10 +208,6 @@ func (mlp *MLP) RandomizeInitialWeights() {
 	}
 }
 
-func (mlp *MLP) InputSize() int {
-	return mlp.inputSize
-}
-
 func (mlp *MLP) L() []*Layer {
 	return mlp.layers
 }

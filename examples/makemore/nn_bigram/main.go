@@ -58,14 +58,14 @@ func main() {
 	)
 training:
 	for start := time.Now(); ; start = time.Now() {
-		// util.ShuffleSamples(samples)
+		fmt.Printf("Training epochs: %d\nLearning rate: %g\n", cfg.Epochs, cfg.LearningRate)
 		trainBigramModel(mlp, samples, cfg)
 		log.Printf("Training time cost: %s", time.Since(start))
 
 		pmat = buildProbMatrix(mlp, vocabSize)
 		log.Printf("[During training] Probability matrix: %s", formatProbMatrix(pmat))
 
-		fmt.Println("Continue training?\n  (q, quit, exit) exit;\n  (float integer) learning_rate -> float, training epochs -> integer;\n  (otherwise) continue.")
+		fmt.Println("Continue training?\n  (q, quit, exit) exit;\n  (integer float) training epochs -> integer, learning_rate -> float;\n  (otherwise) continue.")
 		input, err := reader.ReadString('\n')
 		if err != nil {
 			log.Fatalf("Read input error: %v", err)
@@ -75,21 +75,19 @@ training:
 			break training
 		default:
 			// Input format:
-			// (Case 1) 1.5
-			// - Change learning rate to 1.5
-			// (Case 2) 1.5 500
-			// - Change learning rate to 1.5 and epochs to 500
+			// (Case 1) 200
+			// - Change training epochs to 200
+			// (Case 2) 500 0.05
+			// - Change training epochs to 500 and learning rate to 0.05
 			fields := strings.Fields(input)
 			if len(fields) > 0 {
-				if lr, err := strconv.ParseFloat(fields[0], 64); err == nil {
-					cfg.LearningRate = lr
-					fmt.Printf("Learning rate changed to: %g\n", lr)
+				if ep, err := strconv.Atoi(fields[0]); err == nil {
+					cfg.Epochs = ep
 				}
 			}
 			if len(fields) > 1 {
-				if ep, err := strconv.Atoi(fields[1]); err == nil {
-					cfg.Epochs = ep
-					fmt.Printf("Training epochs changed to: %d\n", ep)
+				if lr, err := strconv.ParseFloat(fields[1], 64); err == nil {
+					cfg.LearningRate = lr
 				}
 			}
 		}
@@ -109,16 +107,14 @@ func constructMLP(vocabSize int) *gonet.MLP {
 }
 
 func trainBigramModel(mlp *gonet.MLP, samples []util.Sample, cfg util.TrainConfig) {
-	// Don't do evaluation on the entire dataset, it will eat all your memory.
-	nSamples := min(10000, len(samples))
-
 	var (
-		delta                 float64
-		vocabSize             = len(samples[0].X)
+		vocabSize = len(samples[0].X)
+		// Don't do evaluation on the entire dataset, it will eat all your memory.
+		nSamples              = min(10000, len(samples))
 		input, loss           = buildLoss(mlp, vocabSize, nSamples)
 		batchInput, batchLoss = buildLoss(mlp, vocabSize, cfg.BatchSize)
-		// optimizer             = util.SGDOptimizer(mlp.Parameters(), cfg.LearningRate)
-		optimizer = util.DefaultAdamOptimizer(mlp.Parameters(), cfg.LearningRate)
+		optimizer             = util.DefaultAdamOptimizer(mlp.Parameters(), cfg.LearningRate)
+		delta                 float64
 	)
 
 	// Evaluation before training.

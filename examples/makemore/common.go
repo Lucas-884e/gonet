@@ -23,7 +23,7 @@ func LazyProbNext(model LazyProbModel, vocabSize, ctxLen int) func(...int) []flo
 	return func(ctx ...int) []float64 {
 		for i, idx := range ctx {
 			for j := range vocabSize {
-				if x := xs[i*vocabSize+idx]; j == idx {
+				if x := xs[i*vocabSize+j]; j == idx {
 					x.SetV(1)
 				} else {
 					x.SetV(0)
@@ -41,9 +41,10 @@ func GenName(i2c []byte, pnext func(...int) []float64, ctxLen int) string {
 	)
 	for {
 		idx := util.RandMultinomial(pnext(ctx...))
-		if idx == 0 {
+		if idx == 0 || len(seq) >= 100 {
 			return string(seq)
 		}
+		ctx = append(ctx[1:], idx)
 		seq = append(seq, i2c[idx])
 	}
 }
