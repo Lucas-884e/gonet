@@ -13,11 +13,11 @@ Two types of implementations:
 
 ### Approach I
 
-![Linear Model](assets/bigram-linear-model.png)
+![Linear Model](/assets/bigram-linear-model.png)
 
 ### Approach II
 
-![Embedding Model](assets/bigram-embedding-model.png)
+![Embedding Model](/assets/bigram-embedding-model.png)
 
 ## How to run
 
