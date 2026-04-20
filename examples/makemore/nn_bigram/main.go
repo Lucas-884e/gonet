@@ -14,7 +14,11 @@ import (
 	"github.com/Lucas-884e/gonet/util"
 )
 
-var data = flag.String("i", "../dataset/names.txt", "Input data file path")
+var (
+	data        = flag.String("i", "../dataset/names.txt", "Input data file path")
+	useLinear   = flag.Bool("linear", false, "Use linear model (otherwise use embedding model)")
+	interactive = flag.Bool("interactive", false, "Turn on interactive mode")
+)
 
 func main() {
 	flag.Parse()
@@ -26,7 +30,7 @@ func main() {
 			corpus = append(corpus, []byte(name))
 		}
 	}
-	// For quick validation.
+	// For quick sanity check.
 	// corpus = corpus[:5]
 	log.Printf("Corpus size: %d", len(corpus))
 
@@ -35,14 +39,20 @@ func main() {
 	vocabSize := len(c2i)
 	log.Printf("Vocabulary (size=%d): %c", vocabSize, i2c)
 
-	// indices := util.CorpusToTokenIndexSequences(corpus, c2i, 1)
 	inputs, labels := util.GenInputsAndLabelsFromCorpus(corpus, c2i, 1)
-	samples := util.GenDatasetFromInputsAndLabels(inputs, labels, 1, vocabSize)
-
 	var (
-		mlp  = constructMLP(vocabSize)
-		pmat = buildProbMatrix(mlp, vocabSize)
+		samples []util.Sample
+		model   gonet.Model
 	)
+	if *useLinear {
+		samples = util.GenOneHotDatasetFromInputsAndLabels(inputs, labels, vocabSize)
+		model = gonet.LinearModel(vocabSize, vocabSize, false)
+	} else {
+		samples = util.GenDatasetFromInputsAndLabels(inputs, labels)
+		model = gonet.EmbeddingModel(vocabSize, vocabSize)
+	}
+
+	pmat := buildProbMatrix(model, vocabSize)
 	for i := range 20 {
 		fmt.Printf("[Before training] Generate name (%d): %s\n", i+1, genName(i2c, pmat))
 	}
@@ -57,13 +67,17 @@ func main() {
 		}
 	)
 training:
-	for start := time.Now(); ; start = time.Now() {
-		fmt.Printf("Training epochs: %d\nLearning rate: %g\n", cfg.Epochs, cfg.LearningRate)
-		trainBigramModel(mlp, samples, cfg)
-		log.Printf("Training time cost: %s", time.Since(start))
+	for {
+		fmt.Printf("Mini-batch size: %d\nTraining epochs: %d\nLearning rate: %g\n", cfg.BatchSize, cfg.Epochs, cfg.LearningRate)
+		timeCost := trainModel(model, samples, cfg)
+		log.Printf("Training time cost: %s", timeCost)
 
-		pmat = buildProbMatrix(mlp, vocabSize)
+		pmat = buildProbMatrix(model, vocabSize)
 		log.Printf("[During training] Probability matrix: %s", formatProbMatrix(pmat))
+
+		if !*interactive {
+			break
+		}
 
 		fmt.Println("Continue training?\n  (q, quit, exit) exit;\n  (integer float) training epochs -> integer, learning_rate -> float;\n  (otherwise) continue.")
 		input, err := reader.ReadString('\n')
@@ -93,51 +107,56 @@ training:
 		}
 	}
 
-	pmat = buildProbMatrix(mlp, vocabSize)
+	pmat = buildProbMatrix(model, vocabSize)
 	fmt.Printf("[After training] Probability matrix: %s\n", formatProbMatrix(pmat))
 	for i := range 20 {
 		fmt.Printf("[After training] Generate name (%d): %s\n", i+1, genName(i2c, pmat))
 	}
 }
 
-func constructMLP(vocabSize int) *gonet.MLP {
-	mlp := gonet.NewMLP(vocabSize)
-	mlp.AddLayer(vocabSize, gonet.OpSoftmax, false)
-	return mlp
-}
+func trainModel(model gonet.Model, samples []util.Sample, cfg util.TrainConfig) time.Duration {
+	nSamples := len(samples)
+	if *useLinear {
+		// Don't do evaluation on the entire dataset when using LinearModel, it
+		// will eat all your memory and result in nothing.
+		nSamples = 10000
+	}
 
-func trainBigramModel(mlp *gonet.MLP, samples []util.Sample, cfg util.TrainConfig) {
 	var (
-		vocabSize = len(samples[0].X)
-		// Don't do evaluation on the entire dataset, it will eat all your memory.
-		nSamples              = min(10000, len(samples))
-		input, loss           = buildLoss(mlp, vocabSize, nSamples)
-		batchInput, batchLoss = buildLoss(mlp, vocabSize, cfg.BatchSize)
-		optimizer             = util.DefaultAdamOptimizer(mlp.Parameters(), cfg.LearningRate)
-		delta                 float64
+		optimizer   = util.DefaultAdamOptimizer(model.Parameters(), cfg.LearningRate)
+		totalLossFn = gonet.ModelLossFunc(model, gonet.CrossEntropyLoss)
+		lossFn      = gonet.ModelLossFunc(model, gonet.CrossEntropyLoss)
+		loss        *gonet.Node
+		delta       float64
 	)
 
 	// Evaluation before training.
-	input.Update(samples[:nSamples])
-	loss.Forward()
-	log.Printf("[Before training] total loss: %g", loss.V())
+	totalLoss := totalLossFn(samples[:nSamples])
+	log.Printf("[Before training] total loss: %g", totalLoss.V())
 
+	start := time.Now()
 	for ep := 0; ep < cfg.Epochs; ep++ {
+		util.ShuffleSamples(samples)
 		for start := 0; start < len(samples); start += cfg.BatchSize {
-			end := min(start+cfg.BatchSize, len(samples))
-			batchInput.Update(samples[start:end])
-			batchLoss.Backward()
+			end := start + cfg.BatchSize
+			if end > len(samples) {
+				break // Ignore samples left that cannot form a mini-batch.
+			}
+			loss = lossFn(samples[start:end])
+			loss.Backward()
 			delta = optimizer.Learn()
 		}
 
 		if ep%10 == 0 || ep+1 == cfg.Epochs {
-			log.Printf("[Epoch=%d] Gradient descent delta=%g | loss=%g", ep, delta, batchLoss.V())
+			log.Printf("[Epoch=%d] Gradient descent delta=%g | loss=%g", ep, delta, loss.V())
 		}
 	}
+	timeCost := time.Since(start)
 
 	// Evaluation after training.
-	loss.Forward()
-	log.Printf("[After training] total loss: %g", loss.V())
+	totalLoss.Forward()
+	log.Printf("[After training] total loss: %g", totalLoss.V())
+	return timeCost
 }
 
 func genName(i2c []byte, probMat [][]float64) string {
@@ -145,28 +164,27 @@ func genName(i2c []byte, probMat [][]float64) string {
 		idx int
 		seq []byte
 	)
-	for {
+	for range 100 { // Cutoff at 100 to avoid infinite cycle.
 		idx = util.RandMultinomial(probMat[idx])
 		if idx == 0 {
-			return string(seq)
+			break
 		}
 		seq = append(seq, i2c[idx])
 	}
+	return string(seq)
 }
 
-func buildLoss(mlp *gonet.MLP, vocabSize, inputSize int) (input gonet.SampleBatch, loss *gonet.Node) {
-	input = gonet.NewSampleBatch(vocabSize, vocabSize, inputSize)
-	loss = gonet.ModelLossFunc(mlp, gonet.CrossEntropyLoss)(input)
-	return
-}
-
-func buildProbMatrix(mlp *gonet.MLP, vocabSize int) (mat [][]float64) {
+func buildProbMatrix(m gonet.Model, vocabSize int) (mat [][]float64) {
 	for idx := range vocabSize {
-		xs := gonet.NewInputNodeBatch(vocabSize, "X_%d")
-		xs[idx].SetV(1)
-		mat = append(mat, mlp.Output(xs))
+		var xs []float64
+		if *useLinear {
+			xs = util.OneHot(idx, vocabSize)
+		} else {
+			xs = []float64{float64(idx)}
+		}
+		mat = append(mat, util.Softmax(m.Predict(xs)))
 	}
-	return
+	return mat
 }
 
 func formatProbMatrix(pmat [][]float64) string {

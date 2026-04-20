@@ -7,6 +7,7 @@ import (
 type Parameter interface {
 	Learn(delta float64)
 	SetV(float64)
+	ZeroG()
 	G() float64
 }
 
@@ -47,6 +48,7 @@ func (so *sgdOptimizer) Learn() (diff float64) {
 		g := p.G()
 		p.Learn(so.eta * g)
 		diff += g * g
+		p.ZeroG()
 	}
 	return diff
 }
@@ -90,6 +92,7 @@ func (ao *adamOptimizer) Learn() (diff float64) {
 		g := ao.learningRate(i, p.G())
 		p.Learn(ao.eta * g)
 		diff += g * g
+		p.ZeroG()
 	}
 	return diff
 }

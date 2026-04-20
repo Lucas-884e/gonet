@@ -56,7 +56,7 @@ func graphTrain(trainingSet, validationSet, testSet []util.Sample) {
 		delta     float64
 	)
 
-	precision := PredictionPrecision(mlp, validationSet, isCorrect)
+	precision := util.PredictionPrecision(mlp, validationSet, isCorrect)
 	log.Printf("[Before training] Validation set prediction precision: %g", precision)
 
 	var (
@@ -66,9 +66,8 @@ func graphTrain(trainingSet, validationSet, testSet []util.Sample) {
 			StopEps:      0,
 			LearningRate: 0.03,
 		}
-		batchInput = gonet.NewSampleBatch(2, 1, cfg.BatchSize)
-		loss       = lossFn(batchInput)
-		optimizer  = util.DefaultAdamOptimizer(mlp.Parameters(), cfg.LearningRate)
+		optimizer = util.DefaultAdamOptimizer(mlp.Parameters(), cfg.LearningRate)
+		loss      *gonet.Node
 	)
 train:
 	for ep := 0; ep < cfg.Epochs; ep++ {
@@ -76,7 +75,7 @@ train:
 		util.ShuffleSamples(trainingSet)
 		for start := 0; start < tsSize; start += cfg.BatchSize {
 			end := min(start+cfg.BatchSize, tsSize)
-			batchInput.Update(trainingSet[start:end])
+			loss = lossFn(trainingSet[start:end])
 			loss.Backward()
 
 			if delta = optimizer.Learn(); delta < cfg.StopEps {
@@ -86,33 +85,11 @@ train:
 		}
 
 		if ep%5 == 0 || ep+1 == cfg.Epochs {
-			precision := PredictionPrecision(mlp, validationSet, isCorrect)
+			precision := util.PredictionPrecision(mlp, validationSet, isCorrect)
 			log.Printf("[Epoch %d] Validation set prediction precision (delta=%g): %g", ep+1, delta, precision)
 		}
 	}
 
-	precision = PredictionPrecision(mlp, testSet, isCorrect)
+	precision = util.PredictionPrecision(mlp, testSet, isCorrect)
 	log.Printf("[After training] Test set prediction precision: %g", precision)
-	// fmt.Println(mlp)
-}
-
-func PredictionPrecision(model *gonet.MLP, dataset []util.Sample, isCorrect util.IsCorrectFunc) float32 {
-	var (
-		correctCount int
-		input        = []*gonet.Node{
-			gonet.NewInputNode(0, "X1"),
-			gonet.NewInputNode(0, "X2"),
-		}
-		predicted = model.Feed(input)
-	)
-	for _, sample := range dataset {
-		for i, x := range sample.X {
-			input[i].SetV(x)
-		}
-		predicted[0].Forward()
-		if isCorrect(gonet.NodeValues(predicted), sample.Y) {
-			correctCount++
-		}
-	}
-	return float32(correctCount) / float32(len(dataset))
 }

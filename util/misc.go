@@ -20,7 +20,21 @@ type TrainConfig struct {
 	LearningRate float64
 }
 
-type IsCorrectFunc func(pred, actual []float64) bool
+type IsCorrectFunc func(pred, label []float64) bool
+
+type Predictor interface {
+	Predict([]float64) []float64
+}
+
+func PredictionPrecision(p Predictor, testSet []Sample, isCorrect IsCorrectFunc) float32 {
+	var correctCount int
+	for _, sample := range testSet {
+		if isCorrect(p.Predict(sample.X), sample.Y) {
+			correctCount++
+		}
+	}
+	return float32(correctCount) / float32(len(testSet))
+}
 
 func RandomUniformSample(min, max float64) float64 {
 	return min + rand.Float64()*(max-min)

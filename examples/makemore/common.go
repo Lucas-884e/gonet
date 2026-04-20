@@ -2,49 +2,21 @@
 package makemore
 
 import (
-	"fmt"
-
-	"github.com/Lucas-884e/gonet"
 	"github.com/Lucas-884e/gonet/util"
 )
-
-type LazyProbModel interface {
-	LazyOutput([]*gonet.Node) func() []float64
-}
-
-func LazyProbNext(model LazyProbModel, vocabSize, ctxLen int) func(...int) []float64 {
-	var xs []*gonet.Node
-	for i := range ctxLen {
-		ohe := gonet.NewInputNodeBatch(vocabSize, fmt.Sprintf("X%d_%%d", i))
-		xs = append(xs, ohe...)
-	}
-	lo := model.LazyOutput(xs)
-
-	return func(ctx ...int) []float64 {
-		for i, idx := range ctx {
-			for j := range vocabSize {
-				if x := xs[i*vocabSize+j]; j == idx {
-					x.SetV(1)
-				} else {
-					x.SetV(0)
-				}
-			}
-		}
-		return lo()
-	}
-}
 
 func GenName(i2c []byte, pnext func(...int) []float64, ctxLen int) string {
 	var (
 		seq []byte
 		ctx = make([]int, ctxLen)
 	)
-	for {
+	for range 100 {
 		idx := util.RandMultinomial(pnext(ctx...))
-		if idx == 0 || len(seq) >= 100 {
-			return string(seq)
+		if idx == 0 {
+			break
 		}
 		ctx = append(ctx[1:], idx)
 		seq = append(seq, i2c[idx])
 	}
+	return string(seq)
 }

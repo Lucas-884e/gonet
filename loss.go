@@ -1,13 +1,18 @@
 package gonet
 
 import (
+	"cmp"
 	"fmt"
 	"math"
+	"slices"
 
 	"github.com/Lucas-884e/gonet/util"
 )
 
-type LossFunction func(actual, predicted []*Node) *Node
+type (
+	LossFunction func(actual, predicted []*Node) *Node
+	E2ELoss      func([]util.Sample) *Node
+)
 
 type FeedForwarder interface {
 	Feed([]*Node) []*Node
@@ -56,13 +61,27 @@ func (sb SampleBatch) Update(samples []util.Sample) {
 	}
 }
 
-func ModelLossFunc(model FeedForwarder, lf LossFunction) func([]*Sample) *Node {
-	return func(samples []*Sample) *Node {
-		var losses []*Node
-		for _, s := range samples {
-			losses = append(losses, lf(s.Y, model.Feed(s.X)))
+func ModelLossFunc(model FeedForwarder, lf LossFunction) E2ELoss {
+	var (
+		batch SampleBatch
+		loss  *Node
+	)
+
+	return func(samples []util.Sample) *Node {
+		if len(batch) == 0 || loss == nil {
+			batch = NewSampleBatch(len(samples[0].X), len(samples[0].Y), len(samples))
+
+			losses := make([]*Node, len(samples))
+			for i, s := range batch {
+				out := model.Feed(s.X)
+				losses[i] = lf(s.Y, out)
+			}
+			loss = BatchLoss(losses...)
 		}
-		return BatchLoss(losses...)
+
+		batch.Update(samples)
+		loss.Forward()
+		return loss
 	}
 }
 
@@ -102,18 +121,53 @@ func ResidualSumSquaredLoss(actual, predicted []*Node) *Node {
 // the actual probability of each predefined class which should contain only one
 // non-vanishing entry with value 1, meaning this class is observed in the data
 // set sample (hence probability equals 1).
-// Note, calculating the concrete value of cross-entropy is meaningless, so the
-// returned node does not contain a valid `Node.v`, it only has `Node.backward`
-// and `Node.prev` assigned for backward propagation.
 func CrossEntropyLoss(actual, predicted []*Node) *Node {
-	if len(predicted) != len(actual) {
-		panic(fmt.Sprintf("Cross-Entropy loss function must receive the same number of predicted values and actual values, got actual %v", actual))
-	}
-
 	out := &Node{
-		name: fmt.Sprintf("cross_entropy[count=%d]", len(actual)),
+		name: fmt.Sprintf("cross_entropy[count=%d]", len(predicted)),
 		prev: predicted,
 	}
+
+	if len(actual) == 1 {
+		// In this case, predicted are actually logits, and the softmax layer is
+		// fused with this loss function.
+		var (
+			qs       = make([]float64, len(predicted))
+			observed int
+		)
+
+		out.forward = func() {
+			var (
+				vmax = slices.MaxFunc(predicted, func(a, b *Node) int { return cmp.Compare(a.v, b.v) }).v
+				sum  float64
+			)
+			for i, n := range predicted {
+				qs[i] = math.Exp(n.v - vmax)
+				sum += qs[i]
+			}
+			for i, q := range qs {
+				qs[i] = q / sum
+			}
+
+			observed = int(actual[0].v)
+			out.v = -math.Log(qs[observed])
+		}
+
+		out.backward = func() {
+			for i, n := range predicted {
+				if i == observed {
+					n.g += (qs[i] - 1) * out.g
+				} else {
+					n.g += qs[i] * out.g
+				}
+			}
+		}
+		return out
+	}
+
+	if len(predicted) != len(actual) {
+		panic(fmt.Sprintf("Cross-Entropy loss function must receive the same number of predicted values and actual values, got actual %d", len(actual)))
+	}
+
 	out.forward = func() {
 		var observed int
 		for idx, a := range actual {
@@ -126,6 +180,7 @@ func CrossEntropyLoss(actual, predicted []*Node) *Node {
 		n := predicted[observed]
 		out.v = -math.Log(n.v)
 	}
+
 	out.backward = func() {
 		var observed int
 		for idx, a := range actual {

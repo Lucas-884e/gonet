@@ -24,7 +24,7 @@ func NewInputNode(v float64, name string) *Node {
 func NewInputNodeBatch(size int, nameFmt string) []*Node {
 	batch := make([]*Node, size)
 	for i := range batch {
-		batch[i] = NewInputNode(0, fmt.Sprintf(nameFmt, i+1))
+		batch[i] = NewInputNode(0, fmt.Sprintf(nameFmt, i))
 	}
 	return batch
 }
@@ -65,6 +65,10 @@ func (n *Node) SetV(v float64) {
 	n.v = v
 }
 
+func (n *Node) ZeroG() {
+	n.g = 0
+}
+
 func (n *Node) V() float64 {
 	return n.v
 }
@@ -85,9 +89,12 @@ func (n *Node) Forward() {
 	}
 }
 
-func (n *Node) Backward() {
+func (n *Node) ForwardBackward() {
 	n.Forward()
+	n.Backward()
+}
 
+func (n *Node) Backward() {
 	sorted := n.topologicalSort()
 	for _, sn := range sorted {
 		sn.g = 0

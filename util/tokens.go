@@ -80,10 +80,19 @@ func OneHots(indexes []int, vocabSize int) []float64 {
 	return v
 }
 
-func GenDatasetFromInputsAndLabels(inputs [][]int, labels []int, ctxLen, vocabSize int) (samples []Sample) {
+func GenDatasetFromInputsAndLabels(inputs [][]int, labels []int) (samples []Sample) {
+	for i, input := range inputs {
+		x := NumberSliceConvert[int, float64](input)
+		y := []float64{float64(labels[i])}
+		samples = append(samples, Sample{X: x, Y: y})
+	}
+	return
+}
+
+func GenOneHotDatasetFromInputsAndLabels(inputs [][]int, labels []int, vocabSize int) (samples []Sample) {
 	for i, input := range inputs {
 		x := OneHots(input, vocabSize)
-		y := OneHot(labels[i], vocabSize)
+		y := []float64{float64(labels[i])}
 		samples = append(samples, Sample{X: x, Y: y})
 	}
 	return

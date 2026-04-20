@@ -60,7 +60,7 @@ func TestNode(t *testing.T) {
 			NewInputNode(0, "actual2"),
 		}, zs)
 	)
-	ce.Backward()
+	ce.ForwardBackward()
 
 	// Test Node.bfs()
 	forwardOrder := []*Node{
@@ -145,7 +145,7 @@ func TestMultiply(t *testing.T) {
 	p.Forward()
 	assert.EqualValues(t, 210, p.V())
 
-	p.Backward()
+	p.ForwardBackward()
 	assert.EqualValues(t, 105, a.G())
 	assert.EqualValues(t, 70, b.G())
 	assert.EqualValues(t, 42, c.G())

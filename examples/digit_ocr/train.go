@@ -1,7 +1,6 @@
 package main
 
 import (
-	"fmt"
 	"log"
 
 	"github.com/Lucas-884e/gonet"
@@ -32,7 +31,6 @@ func nonGraphTrain(trainingSet, validationSet, testSet []util.Sample) {
 		LearningRate: 0.05,
 	}, trainingSet, validationSet)
 
-	// nn.Print()
 	log.Println("(After training) Testing set prediction precision:", tr.PredictionPrecision(testSet))
 }
 
@@ -54,9 +52,8 @@ func graphTrain(trainingSet, validationSet, testSet []util.Sample) {
 		delta          float64
 	)
 
-	precision := PredictionPrecision(mlp, validationSet)
+	precision := util.PredictionPrecision(mlp, validationSet, isCorrect)
 	log.Printf("[Before training] Validation set prediction precision: %g", precision)
-	// fmt.Println(mlp)
 
 	var (
 		cfg = util.TrainConfig{
@@ -65,9 +62,8 @@ func graphTrain(trainingSet, validationSet, testSet []util.Sample) {
 			StopEps:      0,
 			LearningRate: 0.005,
 		}
-		batchInput = gonet.NewSampleBatch(inputLayerSize, 10, cfg.BatchSize)
-		loss       = lossFn(batchInput)
-		optimizer  = util.DefaultAdamOptimizer(mlp.Parameters(), cfg.LearningRate)
+		optimizer = util.DefaultAdamOptimizer(mlp.Parameters(), cfg.LearningRate)
+		loss      *gonet.Node
 	)
 train:
 	for ep := 0; ep < cfg.Epochs; ep++ {
@@ -75,7 +71,7 @@ train:
 		util.ShuffleSamples(trainingSet)
 		for start := 0; start < tsSize; start += cfg.BatchSize {
 			end := min(start+cfg.BatchSize, tsSize)
-			batchInput.Update(trainingSet[start:end])
+			loss = lossFn(trainingSet[start:end])
 			loss.Backward()
 
 			if delta = optimizer.Learn(); delta < cfg.StopEps {
@@ -85,36 +81,13 @@ train:
 		}
 
 		if ep%5 == 0 || ep+1 == cfg.Epochs {
-			precision := PredictionPrecision(mlp, validationSet)
+			precision := util.PredictionPrecision(mlp, validationSet, isCorrect)
 			log.Printf("[Epoch %d] Validation set prediction precision (delta=%g): %g", ep+1, delta, precision)
 		}
-		// fmt.Println(mlp)
 	}
 
-	precision = PredictionPrecision(mlp, testSet)
-	log.Printf("(After training) Test set prediction precision: %g", precision)
-	// fmt.Println(mlp)
-}
-
-func PredictionPrecision(model *gonet.MLP, dataset []util.Sample) float32 {
-	var (
-		correctCount int
-		input        = gonet.NewInputNodeBatch(len(dataset[0].X), "X_%d")
-		predicted    = model.Feed(input)
-	)
-	for _, sample := range dataset {
-		for i, x := range sample.X {
-			input[i].SetV(x)
-		}
-		for _, pred := range predicted {
-			pred.Forward()
-		}
-		if isCorrect(gonet.NodeValues(predicted), sample.Y) {
-			correctCount++
-		}
-	}
-	fmt.Println("Correct count:", correctCount, "| Total count:", len(dataset))
-	return float32(correctCount) / float32(len(dataset))
+	precision = util.PredictionPrecision(mlp, testSet, isCorrect)
+	log.Printf("[After training] Test set prediction precision: %g", precision)
 }
 
 func isCorrect(pred, actual []float64) bool {

@@ -18,6 +18,8 @@ func (p *Param) SetV(v float64) {
 	p.v = v
 }
 
+func (p *Param) ZeroG() {}
+
 func (p *Param) G() float64 {
 	return 2 * p.v
 }
@@ -28,8 +30,7 @@ func NewParam(v float64) *Param {
 
 func TestDefaultAdamLearningRateFunc(t *testing.T) {
 	var (
-		p = NewParam(10.0)
-		// g   = func(v float64) float64 { return 2 * v }
+		p   = NewParam(10.0)
 		opt = DefaultAdamOptimizer([]Parameter{p}, 1.05)
 
 		expect = []float64{8.950, 7.904, 6.867, 5.843, 4.838}

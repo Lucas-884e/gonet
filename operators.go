@@ -21,6 +21,8 @@ const (
 	OpSoftmax
 )
 
+func Identity(n *Node) *Node { return n }
+
 func Plus(prev ...*Node) *Node {
 	if len(prev) < 2 {
 		panic("+ node must have at least two previous nodes")

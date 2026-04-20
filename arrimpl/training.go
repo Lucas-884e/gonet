@@ -41,11 +41,5 @@ train:
 }
 
 func (t *Trainer) PredictionPrecision(dataset []util.Sample) float32 {
-	var correctCount int
-	for _, sample := range dataset {
-		if t.isCorrect(t.model.Predict(sample.X), sample.Y) {
-			correctCount++
-		}
-	}
-	return float32(correctCount) / float32(len(dataset))
+	return util.PredictionPrecision(t.model, dataset, t.isCorrect)
 }
