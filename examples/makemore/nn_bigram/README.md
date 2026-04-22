@@ -52,5 +52,5 @@ of training epochs is also much faster.
 | -------- | -------- | -------- | -------- | -------- |
 | Embedding | 10000 | 200MB | 0.2 sec | 1000 |
 | Embedding | 228146 (all samples) | 3.8GB | 0.2 sec | 1000 |
-| Linear | 10000 | 5.4GB | 12s | 1000 |
+| Linear | 10000 | 5.4GB | 12 sec | 1000 |
 | Linear | 228146 (all samples) | OOM | N/A | 1000 |
