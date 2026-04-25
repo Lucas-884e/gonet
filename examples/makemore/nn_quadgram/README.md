@@ -14,9 +14,9 @@ video of the "Neural Networks: Zero to Hero" series taught by Andrej Karpathy.
 
 It is quite obvious that vocabulary (the character set) can be divided into 5 groups:
 
-- ".": the SoS/EoS symbol
-- a/e/i/o/u: mainly generates vowel sounds
-- y: can generate both vowel and consonant sounds
-- q: a special consonant appearing rarely (only 272 times in the dataset, significantly
-  less than other consonants) and often followed by the letter "u"
-- b/c/d/f/g/...: other common consonants
+- `.`: the SoS/EoS symbol
+- `a/e/i/o/u`: mainly generate vowel sounds
+- `y`: can generate both vowel and consonant sounds
+- `q`: a special consonant appearing rarely (only 272 times in the dataset, significantly
+  less than other consonants) and often followed by the letter `u`
+- `b/c/d/f/g/...`: other common consonants

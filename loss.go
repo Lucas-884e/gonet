@@ -106,7 +106,7 @@ func BatchLoss(losses ...*Node) *Node {
 	if len(losses) == 1 {
 		return losses[0]
 	}
-	return Multiply(Plus(losses...), NewNode(1/float64(len(losses)), "mean"))
+	return Mean(losses...)
 }
 
 // ResidualSumSquaredLoss is the Residual Sum of Squared (RSS) or Sum of Squared Errors (SSE).

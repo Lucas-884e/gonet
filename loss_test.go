@@ -16,17 +16,11 @@ func TestBatchLoss(t *testing.T) {
 
 	assert.Equal(t, a, BatchLoss(a))
 
-	z.Forward()
-	z.Backward()
+	z.ForwardBackward()
 	assert.EqualValues(t, 1.5, z.V())
-	assert.Equal(t, "(a+b)×mean", z.Name())
+	assert.Equal(t, "mean", z.Name())
 
 	assert.EqualValues(t, 1, z.G())
-
-	sum := z.prev[0]
-	assert.EqualValues(t, 0.5, sum.G())
-	mean := z.prev[1]
-	assert.EqualValues(t, 3, mean.G())
 
 	assert.EqualValues(t, 0.5, a.G())
 	assert.EqualValues(t, 0.5, b.G())

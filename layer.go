@@ -232,3 +232,36 @@ func (dl *disembeddingLayer) Parameters() []util.Parameter {
 }
 
 func (dl *disembeddingLayer) Name() string { return "DisembeddingLayer" }
+
+func LayerNormLayer(dim int) Layer {
+	var (
+		gamma = make([]*Node, dim)
+		beta  = make([]*Node, dim)
+	)
+	for i := range dim {
+		gamma[i] = NewNode(rand.NormFloat64(), fmt.Sprintf("gamma_%d", i))
+		beta[i] = NewNode(rand.NormFloat64(), fmt.Sprintf("beta_%d", i))
+	}
+	return &layerNormLayer{
+		gamma: gamma,
+		beta:  beta,
+		eps:   1e-5,
+	}
+}
+
+type layerNormLayer struct {
+	gamma []*Node
+	beta  []*Node
+	eps   float64
+}
+
+func (lnl *layerNormLayer) Feed(in []*Node) (out []*Node) {
+	return LayerNorm(in, lnl.gamma, lnl.beta, lnl.eps)
+}
+
+func (lnl *layerNormLayer) Parameters() []util.Parameter {
+	return append(util.SliceConvert[*Node, util.Parameter](lnl.gamma),
+		util.SliceConvert[*Node, util.Parameter](lnl.beta)...)
+}
+
+func (lnl *layerNormLayer) Name() string { return "LayerNormalizationLayer" }
