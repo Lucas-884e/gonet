@@ -64,7 +64,7 @@ func trainEmbeddings(samples []util.Sample, vocabSize, dim int) (emb, disemb *go
 			LearningRate: 0.01,
 		}
 		optimizer = util.DefaultAdamOptimizer(model.Parameters(), cfg.LearningRate)
-		lossFn    = gonet.ModelLossFunc(model, gonet.CrossEntropyLoss)
+		lossFn    = gonet.TrainLossFunc(model, gonet.CrossEntropyLoss)
 		loss      *gonet.Node
 		delta     float64
 	)

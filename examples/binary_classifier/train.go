@@ -50,7 +50,7 @@ func constructGraphNetwork(hiddenLayerSizes ...int) *gonet.MLP {
 func graphTrain(trainingSet, validationSet, testSet []util.Sample) {
 	var (
 		mlp       = constructGraphNetwork(8)
-		lossFn    = gonet.ModelLossFunc(mlp, gonet.MaxMarginLoss)
+		lossFn    = gonet.TrainLossFunc(mlp, gonet.MaxMarginLoss)
 		isCorrect = func(pred, actual []float64) bool { return pred[0]*actual[0] > 0 }
 		tsSize    = len(trainingSet)
 		delta     float64

@@ -52,7 +52,7 @@ func TestModelLossFunc(t *testing.T) {
 			{X: []float64{-0.7}, Y: []float64{-1.5}},
 		}
 		model  = newMockModel(2)
-		lossFn = ModelLossFunc(model, ResidualSumSquaredLoss)
+		lossFn = TrainLossFunc(model, ResidualSumSquaredLoss)
 		loss   = lossFn(samples)
 		w      = model.w
 	)

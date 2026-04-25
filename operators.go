@@ -32,21 +32,27 @@ func Plus(prev ...*Node) *Node {
 	for _, n := range prev {
 		names = append(names, n.name)
 	}
-	out := &Node{
-		name: strings.Join(names, "+"),
-		op:   OpPlus,
-		prev: prev,
-	}
+	var (
+		noGrad = prev[0].noGrad
+		out    = &Node{
+			name:   strings.Join(names, "+"),
+			op:     OpPlus,
+			prev:   prev,
+			noGrad: noGrad,
+		}
+	)
 	out.forward = func() {
 		out.v = 0
 		for _, n := range prev {
 			out.v += n.v
 		}
 	}
-	out.backward = func() {
-		for _, n := range prev {
-			if !n.isInput {
-				n.g += out.g
+	if !noGrad {
+		out.backward = func() {
+			for _, n := range prev {
+				if !n.isInput {
+					n.g += out.g
+				}
 			}
 		}
 	}
@@ -61,6 +67,7 @@ func Multiply(prev ...*Node) *Node {
 	var (
 		names  []string
 		localG = make([]float64, len(prev))
+		noGrad bool
 	)
 	for _, n := range prev {
 		if n.op == OpPlus {
@@ -68,11 +75,15 @@ func Multiply(prev ...*Node) *Node {
 		} else {
 			names = append(names, n.name)
 		}
+		if n.noGrad {
+			noGrad = true
+		}
 	}
 	out := &Node{
-		name: strings.Join(names, "×"),
-		op:   OpMultiply,
-		prev: prev,
+		name:   strings.Join(names, "×"),
+		op:     OpMultiply,
+		prev:   prev,
+		noGrad: noGrad,
 	}
 	out.forward = func() {
 		out.v = 1
@@ -87,10 +98,12 @@ func Multiply(prev ...*Node) *Node {
 			out.v *= n.v
 		}
 	}
-	out.backward = func() {
-		for i, n := range prev {
-			if !n.isInput {
-				n.g += localG[i] * out.g
+	if !noGrad {
+		out.backward = func() {
+			for i, n := range prev {
+				if !n.isInput {
+					n.g += localG[i] * out.g
+				}
 			}
 		}
 	}
@@ -99,9 +112,10 @@ func Multiply(prev ...*Node) *Node {
 
 func Relu(prev *Node) *Node {
 	out := &Node{
-		name: fmt.Sprintf("relu(%s)", prev.name),
-		op:   OpRelu,
-		prev: []*Node{prev},
+		name:   fmt.Sprintf("relu(%s)", prev.name),
+		op:     OpRelu,
+		prev:   []*Node{prev},
+		noGrad: prev.noGrad,
 	}
 	out.forward = func() {
 		out.v = 0
@@ -109,9 +123,11 @@ func Relu(prev *Node) *Node {
 			out.v = prev.v
 		}
 	}
-	out.backward = func() {
-		if out.v > 0 {
-			prev.g += out.g
+	if !prev.noGrad {
+		out.backward = func() {
+			if out.v > 0 {
+				prev.g += out.g
+			}
 		}
 	}
 	return out
@@ -119,30 +135,36 @@ func Relu(prev *Node) *Node {
 
 func Sigmoid(prev *Node) *Node {
 	out := &Node{
-		name: fmt.Sprintf("σ(%s)", prev.name),
-		op:   OpSigmoid,
-		prev: []*Node{prev},
+		name:   fmt.Sprintf("σ(%s)", prev.name),
+		op:     OpSigmoid,
+		prev:   []*Node{prev},
+		noGrad: prev.noGrad,
 	}
 	out.forward = func() {
 		out.v = 1 / (1 + math.Exp(-prev.v))
 	}
-	out.backward = func() {
-		prev.g += out.v * (1 - out.v) * out.g
+	if !prev.noGrad {
+		out.backward = func() {
+			prev.g += out.v * (1 - out.v) * out.g
+		}
 	}
 	return out
 }
 
 func Tanh(prev *Node) *Node {
 	out := &Node{
-		name: fmt.Sprintf("tanh(%s)", prev.name),
-		op:   OpTanh,
-		prev: []*Node{prev},
+		name:   fmt.Sprintf("tanh(%s)", prev.name),
+		op:     OpTanh,
+		prev:   []*Node{prev},
+		noGrad: prev.noGrad,
 	}
 	out.forward = func() {
 		out.v = math.Tanh(prev.v)
 	}
-	out.backward = func() {
-		prev.g += (1 - out.v) * (1 + out.v) * out.g
+	if !prev.noGrad {
+		out.backward = func() {
+			prev.g += (1 - out.v) * (1 + out.v) * out.g
+		}
 	}
 	return out
 }
@@ -153,12 +175,16 @@ func Softmax(t float64, prev ...*Node) []*Node {
 		panic("softmax node must have at least two previous nodes")
 	}
 
-	outs := make([]*Node, len(prev))
+	var (
+		outs   = make([]*Node, len(prev))
+		noGrad = prev[0].noGrad
+	)
 	for i := range prev {
 		outs[i] = &Node{
-			name: fmt.Sprintf("softmax[index=%d](T=%g)", i, t),
-			op:   OpSoftmax,
-			prev: prev,
+			name:   fmt.Sprintf("softmax[index=%d](T=%g)", i, t),
+			op:     OpSoftmax,
+			prev:   prev,
+			noGrad: noGrad,
 		}
 	}
 
@@ -189,14 +215,16 @@ func Softmax(t float64, prev ...*Node) []*Node {
 			}
 		}
 
-		// NOTE: This closure only works for Go1.22+ because `i` doesn't preserve
-		// the value on the out.forward assignment before this version.
-		out.backward = func() {
-			for j, n := range prev {
-				if j == i {
-					n.g += out.v * (1 - out.v) * out.g
-				} else {
-					n.g -= out.v * outs[j].v * out.g
+		if !noGrad {
+			// NOTE: This closure only works for Go1.22+ because `i` doesn't preserve
+			// the value on the out.forward assignment before this version.
+			out.backward = func() {
+				for j, n := range prev {
+					if j == i {
+						n.g += out.v * (1 - out.v) * out.g
+					} else {
+						n.g -= out.v * outs[j].v * out.g
+					}
 				}
 			}
 		}

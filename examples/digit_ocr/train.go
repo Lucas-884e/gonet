@@ -47,7 +47,7 @@ func graphTrain(trainingSet, validationSet, testSet []util.Sample) {
 	var (
 		inputLayerSize = len(trainingSet[0].X)
 		mlp            = constructGraphNetwork(inputLayerSize, 32, 16)
-		lossFn         = gonet.ModelLossFunc(mlp, gonet.CrossEntropyLoss)
+		lossFn         = gonet.TrainLossFunc(mlp, gonet.CrossEntropyLoss)
 		tsSize         = len(trainingSet)
 		delta          float64
 	)

@@ -21,10 +21,20 @@ func NewInputNode(v float64, name string) *Node {
 	return n
 }
 
-func NewInputNodeBatch(size int, nameFmt string) []*Node {
+func NewInputNodeNoGrad(v float64, name string) *Node {
+	n := NewInputNode(v, name)
+	n.noGrad = true
+	return n
+}
+
+func NewInputNodeBatch(size int, nameFmt string, noGrad bool) []*Node {
 	batch := make([]*Node, size)
 	for i := range batch {
-		batch[i] = NewInputNode(0, fmt.Sprintf(nameFmt, i))
+		if noGrad {
+			batch[i] = NewInputNodeNoGrad(0, fmt.Sprintf(nameFmt, i))
+		} else {
+			batch[i] = NewInputNode(0, fmt.Sprintf(nameFmt, i))
+		}
 	}
 	return batch
 }
@@ -41,6 +51,7 @@ type Node struct {
 	name    string
 	isLeaf  bool // Is current node a leaf node (ie, not a composite note generated from a few other nodes)
 	isInput bool // Is current node an input node (input values for neural network input layer)?
+	noGrad  bool
 	op      Operator
 	prev    []*Node // previous node
 

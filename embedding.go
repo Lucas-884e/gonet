@@ -37,19 +37,23 @@ func (e *Embedding) component(eindex, cindex int) *Node {
 }
 
 func (e *Embedding) EmbeddingFeed(in []*Node) (out []*Node) {
+	noGrad := in[0].noGrad
 	for _, n := range in {
 		for cidx := range e.dim {
 			o := &Node{
-				name: fmt.Sprintf("Embedding_%d", cidx),
+				name:   fmt.Sprintf("Embedding_%d", cidx),
+				noGrad: noGrad,
 			}
 			o.forward = func() {
 				eidx := int(n.V())
 				o.v = e.component(eidx, cidx).v
 			}
-			o.backward = func() {
-				eidx := int(n.V())
-				w := e.component(eidx, cidx)
-				w.g += o.g
+			if !noGrad {
+				o.backward = func() {
+					eidx := int(n.V())
+					w := e.component(eidx, cidx)
+					w.g += o.g
+				}
 			}
 			out = append(out, o)
 		}

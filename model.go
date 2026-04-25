@@ -41,7 +41,7 @@ func (sm *sequentialModel) Predict(xs []float64) []float64 {
 	} else {
 		sm.input = make([]*Node, len(xs))
 		for i, x := range xs {
-			sm.input[i] = NewInputNode(x, fmt.Sprintf("X_%d", i))
+			sm.input[i] = NewInputNodeNoGrad(x, fmt.Sprintf("X_%d", i))
 		}
 		sm.output = sm.Feed(sm.input)
 	}

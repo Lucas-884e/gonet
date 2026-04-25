@@ -115,24 +115,17 @@ training:
 }
 
 func trainModel(model gonet.Model, samples []util.Sample, cfg util.TrainConfig) time.Duration {
-	nSamples := len(samples)
-	if *useLinear {
-		// Don't do evaluation on the entire dataset when using LinearModel, it
-		// will eat all your memory and result in nothing.
-		nSamples = 10000
-	}
-
 	var (
 		optimizer   = util.DefaultAdamOptimizer(model.Parameters(), cfg.LearningRate)
-		totalLossFn = gonet.ModelLossFunc(model, gonet.CrossEntropyLoss)
-		lossFn      = gonet.ModelLossFunc(model, gonet.CrossEntropyLoss)
+		totalLossFn = gonet.PredictLossFunc(model, gonet.CrossEntropyLoss)
+		lossFn      = gonet.TrainLossFunc(model, gonet.CrossEntropyLoss)
 		loss        *gonet.Node
 		delta       float64
 	)
 
 	// Evaluation before training.
-	totalLoss := totalLossFn(samples[:nSamples])
-	log.Printf("[Before training] total loss: %g", totalLoss.V())
+	totalLoss := totalLossFn(samples)
+	log.Printf("[Before training] total loss: %g", totalLoss)
 
 	start := time.Now()
 	for ep := 0; ep < cfg.Epochs; ep++ {
@@ -154,8 +147,8 @@ func trainModel(model gonet.Model, samples []util.Sample, cfg util.TrainConfig) 
 	timeCost := time.Since(start)
 
 	// Evaluation after training.
-	totalLoss.Forward()
-	log.Printf("[After training] total loss: %g", totalLoss.V())
+	totalLoss = totalLossFn(samples)
+	log.Printf("[After training] total loss: %g", totalLoss)
 	return timeCost
 }
 

@@ -10,8 +10,9 @@ import (
 )
 
 type (
-	LossFunction func(actual, predicted []*Node) *Node
-	E2ELoss      func([]util.Sample) *Node
+	LossFunction   func(actual, predicted []*Node) *Node
+	E2ELoss        func([]util.Sample) *Node
+	E2EPredictLoss func([]util.Sample) float64
 )
 
 type FeedForwarder interface {
@@ -23,17 +24,11 @@ type Sample struct {
 	Y []*Node
 }
 
-func NewSample(inputSize, outputSize int) *Sample {
+func NewSample(inputSize, outputSize int, noGrad bool) *Sample {
 	return &Sample{
-		X: NewInputNodeBatch(inputSize, "X_%d"),
-		Y: NewInputNodeBatch(outputSize, "Y_%d"),
+		X: NewInputNodeBatch(inputSize, "X_%d", noGrad),
+		Y: NewInputNodeBatch(outputSize, "Y_%d", noGrad),
 	}
-}
-
-func FromSample(us util.Sample) *Sample {
-	s := NewSample(len(us.X), len(us.Y))
-	s.Update(us)
-	return s
 }
 
 func (s *Sample) Update(us util.Sample) {
@@ -50,7 +45,7 @@ type SampleBatch []*Sample
 func NewSampleBatch(inputSize, outputSize, batchSize int) SampleBatch {
 	sb := make(SampleBatch, batchSize)
 	for i := range sb {
-		sb[i] = NewSample(inputSize, outputSize)
+		sb[i] = NewSample(inputSize, outputSize, false)
 	}
 	return sb
 }
@@ -61,7 +56,29 @@ func (sb SampleBatch) Update(samples []util.Sample) {
 	}
 }
 
-func ModelLossFunc(model FeedForwarder, lf LossFunction) E2ELoss {
+func PredictLossFunc(model FeedForwarder, lf LossFunction) E2EPredictLoss {
+	var (
+		sample *Sample
+		loss   *Node
+	)
+
+	return func(samples []util.Sample) float64 {
+		if s0 := samples[0]; sample == nil || loss == nil {
+			sample = NewSample(len(s0.X), len(s0.Y), true)
+			loss = lf(sample.Y, model.Feed(sample.X))
+		}
+
+		var sum float64
+		for _, s := range samples {
+			sample.Update(s)
+			loss.Forward()
+			sum += loss.V()
+		}
+		return sum / float64(len(samples))
+	}
+}
+
+func TrainLossFunc(model FeedForwarder, lf LossFunction) E2ELoss {
 	var (
 		batch SampleBatch
 		loss  *Node
@@ -98,10 +115,14 @@ func ResidualSumSquaredLoss(actual, predicted []*Node) *Node {
 		panic("Residual-Sum-of-Squared loss function must receive the same number of predicted values and actual values")
 	}
 
-	out := &Node{
-		name: fmt.Sprintf("RSS[count=%d]", len(actual)),
-		prev: predicted,
-	}
+	var (
+		noGrad = predicted[0].noGrad
+		out    = &Node{
+			name:   fmt.Sprintf("RSS[count=%d]", len(actual)),
+			prev:   predicted,
+			noGrad: noGrad,
+		}
+	)
 	out.forward = func() {
 		out.v = 0
 		for i, n := range predicted {
@@ -109,9 +130,11 @@ func ResidualSumSquaredLoss(actual, predicted []*Node) *Node {
 			out.v += diff * diff / 2
 		}
 	}
-	out.backward = func() {
-		for i, n := range predicted {
-			n.g += (n.v - actual[i].v) * out.g
+	if !noGrad {
+		out.backward = func() {
+			for i, n := range predicted {
+				n.g += (n.v - actual[i].v) * out.g
+			}
 		}
 	}
 	return out
@@ -122,10 +145,14 @@ func ResidualSumSquaredLoss(actual, predicted []*Node) *Node {
 // non-vanishing entry with value 1, meaning this class is observed in the data
 // set sample (hence probability equals 1).
 func CrossEntropyLoss(actual, predicted []*Node) *Node {
-	out := &Node{
-		name: fmt.Sprintf("cross_entropy[count=%d]", len(predicted)),
-		prev: predicted,
-	}
+	var (
+		noGrad = predicted[0].noGrad
+		out    = &Node{
+			name:   fmt.Sprintf("cross_entropy[count=%d]", len(predicted)),
+			prev:   predicted,
+			noGrad: noGrad,
+		}
+	)
 
 	if len(actual) == 1 {
 		// In this case, predicted are actually logits, and the softmax layer is
@@ -152,12 +179,14 @@ func CrossEntropyLoss(actual, predicted []*Node) *Node {
 			out.v = -math.Log(qs[observed])
 		}
 
-		out.backward = func() {
-			for i, n := range predicted {
-				if i == observed {
-					n.g += (qs[i] - 1) * out.g
-				} else {
-					n.g += qs[i] * out.g
+		if !noGrad {
+			out.backward = func() {
+				for i, n := range predicted {
+					if i == observed {
+						n.g += (qs[i] - 1) * out.g
+					} else {
+						n.g += qs[i] * out.g
+					}
 				}
 			}
 		}
@@ -181,17 +210,19 @@ func CrossEntropyLoss(actual, predicted []*Node) *Node {
 		out.v = -math.Log(n.v)
 	}
 
-	out.backward = func() {
-		var observed int
-		for idx, a := range actual {
-			if a.v > 0 {
-				observed = idx
-				break
+	if !noGrad {
+		out.backward = func() {
+			var observed int
+			for idx, a := range actual {
+				if a.v > 0 {
+					observed = idx
+					break
+				}
 			}
-		}
 
-		n := predicted[observed]
-		n.g -= out.g / n.v
+			n := predicted[observed]
+			n.g -= out.g / n.v
+		}
 	}
 	return out
 }
@@ -201,17 +232,23 @@ func MaxMarginLoss(actual, predicted []*Node) *Node {
 		panic("Max-Margin loss function must receive scalar values for prediction or label")
 	}
 
-	out := &Node{
-		name: fmt.Sprintf("MaxMargin[count=%d]", len(actual)),
-		prev: predicted,
-	}
+	var (
+		noGrad = predicted[0].noGrad
+		out    = &Node{
+			name:   fmt.Sprintf("MaxMargin[count=%d]", len(actual)),
+			prev:   predicted,
+			noGrad: noGrad,
+		}
+	)
 	out.forward = func() {
 		out.v = max(0, 1-predicted[0].v*actual[0].v)
 	}
-	out.backward = func() {
-		n := predicted[0]
-		if d := actual[0]; d.v*n.v < 1 {
-			n.g -= d.v * out.g
+	if !noGrad {
+		out.backward = func() {
+			n := predicted[0]
+			if d := actual[0]; d.v*n.v < 1 {
+				n.g -= d.v * out.g
+			}
 		}
 	}
 	return out

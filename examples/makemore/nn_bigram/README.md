@@ -42,15 +42,13 @@ Two types of implementations:
 
 ## Performance test
 
-On my 2022 MacBook Air with M2 chip and 16GB memory, the approach using an embedding
-layer and accepting token index as neural net input shows a significant performance
-gain comparing with the approach using a linear layer and accepting one-hot encoding
-as network input. The convergence speed of the embedding-layer approach in terms
-of training epochs is also much faster.
+On my 2022 MacBook Air with M2 chip and 16GB memory (GPU is not used), the approach
+using an embedding layer and accepting token index as neural net input shows a significant
+performance gain (memory consumption, convergence speed in terms of training epochs,
+etc.) comparing with the approach using a linear layer and accepting one-hot encoding
+as network input.
 
-| Approach | Dataset size for loss evaluation | Memory | Time cost per epoch | Mini-batch size |
-| -------- | -------- | -------- | -------- | -------- |
-| Embedding | 10000 | 200MB | 0.2 sec | 1000 |
-| Embedding | 228146 (all samples) | 3.8GB | 0.2 sec | 1000 |
-| Linear | 10000 | 5.4GB | 12 sec | 1000 |
-| Linear | 228146 (all samples) | OOM | N/A | 1000 |
+| Approach | Memory | Time cost per epoch | Mini-batch size |
+| -------- | -------- | -------- | -------- |
+| Embedding | 50MB | 0.2 sec | 1000 |
+| Linear | 600MB | 10 sec | 1000 |

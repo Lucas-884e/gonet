@@ -33,7 +33,7 @@ type Model struct {
 	m   gonet.Model
 }
 
-func newModel(vocabSize, sampleCount int) *Model {
+func newModel(vocabSize int) *Model {
 	emb := gonet.NewEmbedding(vocabSize, embDim)
 	disemb := gonet.NewEmbedding(vocabSize, hidSize)
 	m := gonet.SequentialModel(
@@ -65,8 +65,8 @@ func (m *Model) Embeddings() (embs [][embDim]float64) {
 
 func (m *Model) Train(samples []util.Sample, cfg util.TrainConfig) time.Duration {
 	var (
-		totalLossFn = gonet.ModelLossFunc(m.m, gonet.CrossEntropyLoss)
-		lossFn      = gonet.ModelLossFunc(m.m, gonet.CrossEntropyLoss)
+		totalLossFn = gonet.PredictLossFunc(m.m, gonet.CrossEntropyLoss)
+		lossFn      = gonet.TrainLossFunc(m.m, gonet.CrossEntropyLoss)
 
 		params    = m.m.Parameters()
 		optimizer = util.DefaultAdamOptimizer(params, cfg.LearningRate)
@@ -77,7 +77,7 @@ func (m *Model) Train(samples []util.Sample, cfg util.TrainConfig) time.Duration
 
 	// Evaluation before training.
 	totalLoss := totalLossFn(samples)
-	log.Printf("[Before training] total loss: %g", totalLoss.V())
+	log.Printf("[Before training] total loss: %g", totalLoss)
 
 	start := time.Now()
 	for ep := 0; ep < cfg.Epochs; ep++ {
@@ -99,8 +99,8 @@ func (m *Model) Train(samples []util.Sample, cfg util.TrainConfig) time.Duration
 	timeCost := time.Since(start)
 
 	// Evaluation after training.
-	totalLoss.Forward()
-	log.Printf("[After training] total loss: %g", totalLoss.V())
+	totalLoss = totalLossFn(samples)
+	log.Printf("[After training] total loss: %g", totalLoss)
 	return timeCost
 }
 
@@ -114,8 +114,8 @@ func main() {
 			corpus = append(corpus, []byte(name))
 		}
 	}
-	// Don't do evaluation on the entire dataset, it will eat all your memory.
-	corpus = corpus[:2000]
+	// For quick sanity check.
+	// corpus = corpus[:5]
 	log.Printf("Corpus size: %d", len(corpus))
 
 	c2i := util.GenVocabFromCorpus(corpus, '.')
@@ -126,7 +126,7 @@ func main() {
 	inputs, labels := util.GenInputsAndLabelsFromCorpus(corpus, c2i, ctxLen)
 	samples := util.GenDatasetFromInputsAndLabels(inputs, labels)
 
-	model := newModel(vocabSize, len(samples))
+	model := newModel(vocabSize)
 	for i := range 20 {
 		name := makemore.GenName(i2c, model.PredictNextProbs, ctxLen)
 		fmt.Printf("[Before training] Generate name (%d | len=%d): %s\n", i+1, len(name), name)
