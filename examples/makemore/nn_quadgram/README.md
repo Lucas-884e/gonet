@@ -12,7 +12,8 @@ video of the "Neural Networks: Zero to Hero" series taught by Andrej Karpathy.
 
 ![Character Embedding Distribution](/assets/character-embedding-distribution.png)
 
-It is quite obvious that vocabulary (the character set) can be divided into 5 groups:
+It is quite obvious that the vocabulary (the set of all characters) can be divided
+into 5 groups (clusters):
 
 - `.`: the SoS/EoS symbol
 - `a/e/i/o/u`: mainly generate vowel sounds

@@ -49,43 +49,25 @@ func trainEmbeddings(samples []util.Sample, vocabSize, dim int) (emb, disemb *go
 	emb = gonet.NewEmbedding(vocabSize, dim)
 	disemb = gonet.NewEmbedding(vocabSize, dim)
 
-	model := gonet.SequentialModel(
-		gonet.EmbeddingLayer(emb),
-		gonet.DisembeddingLayer(disemb, false),
+	var (
+		model = gonet.SequentialModel(
+			gonet.EmbeddingLayer(emb),
+			gonet.DisembeddingLayer(disemb, false),
+		)
+		precision = util.PredictionPrecision(model, samples, isCorrect)
 	)
-	precision := util.PredictionPrecision(model, samples, isCorrect)
 	log.Printf("[Before training] Prediction precision: %g", precision)
 
 	var (
 		cfg = util.TrainConfig{
-			BatchSize:    1,
-			Epochs:       50000,
-			StopEps:      1e-12,
-			LearningRate: 0.01,
+			BatchSize:        1,
+			Epochs:           50000,
+			LearningRate:     0.01,
+			LogEpochInterval: 5000,
 		}
-		optimizer = util.DefaultAdamOptimizer(model.Parameters(), cfg.LearningRate)
-		lossFn    = gonet.TrainLossFunc(model, gonet.CrossEntropyLoss)
-		loss      *gonet.Node
-		delta     float64
+		timeCost = gonet.Train(model, samples, &cfg, gonet.CrossEntropyLoss)
 	)
-
-train:
-	for ep := 0; ep < cfg.Epochs; ep++ {
-		for start := 0; start < len(samples); start += cfg.BatchSize {
-			end := min(start+cfg.BatchSize, len(samples))
-			loss = lossFn(samples[start:end])
-			loss.Backward()
-
-			if delta = optimizer.Learn(); delta < cfg.StopEps && loss.V() < cfg.StopEps {
-				log.Printf("* Reached stopping criterion (delta = %g | loss=%g < epsilon=%g).", delta, loss.V(), cfg.StopEps)
-				break train
-			}
-		}
-
-		if ep%500 == 0 || ep+1 == cfg.Epochs {
-			log.Printf("[Epoch=%d] Gradient descent delta=%g | loss=%g", ep, delta, loss.V())
-		}
-	}
+	log.Printf("Training time cost: %s", timeCost)
 
 	precision = util.PredictionPrecision(model, samples, isCorrect)
 	log.Printf("[After training] Prediction precision: %g", precision)

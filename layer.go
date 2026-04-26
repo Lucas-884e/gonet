@@ -2,7 +2,6 @@ package gonet
 
 import (
 	"fmt"
-	"math"
 	"math/rand/v2"
 	"strings"
 
@@ -16,19 +15,16 @@ type Layer interface {
 }
 
 func SingleLinear(inputSize int, bias bool) *singleLinear {
-	var (
-		max = math.Sqrt(3 / float64(inputSize))
-		sl  = new(singleLinear)
-	)
+	sl := new(singleLinear)
 
 	for widx := range inputSize {
-		w := util.RandomUniformSample(-max, max)
+		w := rand.NormFloat64()
 		wn := NewNode(w, fmt.Sprintf("W_%d", widx))
 		sl.weights = append(sl.weights, wn)
 	}
 
 	if bias {
-		b := util.RandomUniformSample(-max, max) // bias
+		b := rand.NormFloat64()
 		sl.bias = NewNode(b, "B")
 	}
 

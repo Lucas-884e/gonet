@@ -79,7 +79,7 @@ func (net *FCNNet) RandomizeInitialWeights() {
 		if i == 0 {
 			continue
 		}
-		weights := util.GenerateRandomLayerWeights(layer.size, net.layers[i-1].size+1)
+		weights := GenerateRandomLayerWeights(layer.size, net.layers[i-1].size+1)
 		layer.loadWeights(weights)
 	}
 }
