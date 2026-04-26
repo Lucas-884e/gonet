@@ -24,7 +24,7 @@ func TestFCNNet(t *testing.T) {
 		msg   string
 
 		sigmoid = SigmoidActivator(1)
-		net     = NewFCNNet(2, LossRSS, sigmoid)
+		net     = NewMLP(2, LossRSS, sigmoid)
 
 		expectLayer0 = &Layer{
 			size: 2,

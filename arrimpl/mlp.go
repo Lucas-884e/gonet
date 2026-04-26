@@ -7,21 +7,20 @@ import (
 	"github.com/Lucas-884e/gonet/util"
 )
 
-// FCNNet Implements the Fully-Connect Neural Network.
-type FCNNet struct {
+type MLP struct {
 	layers           []*Layer
 	loss             LossFunction
 	defaultActivator Activator
 	desiredOutputs   []float64
 }
 
-// NewFCNNet returns a new FCNNet with its input dimension equal to `inputSize`.
-func NewFCNNet(inputSize int, loss LossFunction, activator Activator) *FCNNet {
+// NewMLP returns a new Multi-Layer Perceptron with its input dimension equal to `inputSize`.
+func NewMLP(inputSize int, loss LossFunction, activator Activator) *MLP {
 	if activator == nil {
 		activator = LinearActivator()
 	}
 
-	net := &FCNNet{
+	net := &MLP{
 		loss:             loss,
 		defaultActivator: activator,
 	}
@@ -31,14 +30,14 @@ func NewFCNNet(inputSize int, loss LossFunction, activator Activator) *FCNNet {
 }
 
 // AddLayer adds a new layer with the default activation function and its derivative.
-func (net *FCNNet) AddLayer(size int) {
+func (net *MLP) AddLayer(size int) {
 	net.AddLayerWithActivator(size, nil)
 }
 
 // AddLayerWithActivator adds a new layer with the given size (number of neurons)
-// to the FCNNet. This new layer will be considered the output layer until there
+// to the MLP. This new layer will be considered the output layer until there
 // is another new layer being added to the network.
-func (net *FCNNet) AddLayerWithActivator(size int, activator Activator) {
+func (net *MLP) AddLayerWithActivator(size int, activator Activator) {
 	if size == 0 {
 		return
 	}
@@ -74,7 +73,7 @@ func (net *FCNNet) AddLayerWithActivator(size int, activator Activator) {
 }
 
 // RandomizeInitialWeights initialize the network weights to random values.
-func (net *FCNNet) RandomizeInitialWeights() {
+func (net *MLP) RandomizeInitialWeights() {
 	for i, layer := range net.layers {
 		if i == 0 {
 			continue
@@ -84,7 +83,7 @@ func (net *FCNNet) RandomizeInitialWeights() {
 	}
 }
 
-func (net *FCNNet) ZeroGrads() {
+func (net *MLP) ZeroGrads() {
 	for i, l := range net.layers {
 		if i == 0 {
 			continue
@@ -94,7 +93,7 @@ func (net *FCNNet) ZeroGrads() {
 }
 
 // feedInputSample feeds a training sample to the network input and output.
-func (net *FCNNet) feedInputSample(xs, ys []float64) {
+func (net *MLP) feedInputSample(xs, ys []float64) {
 	if len(xs) != net.layers[0].size {
 		panic("Input sample size must match network input dimension")
 	}
@@ -116,7 +115,7 @@ func (net *FCNNet) feedInputSample(xs, ys []float64) {
 //
 // where `Σ_k` is the sum over neuron index `k` (starting from 0 which corresponds
 // to the bias term) in previous layer and `φ (v)` is the activation function.
-func (net *FCNNet) forwardPropagate() {
+func (net *MLP) forwardPropagate() {
 	for l := 1; l < len(net.layers); l++ {
 		prev, curr := net.layers[l-1], net.layers[l]
 		// prod is the matrix product of (curr.neurons.weights · prev.neurons.output)
@@ -133,12 +132,12 @@ func (net *FCNNet) forwardPropagate() {
 	}
 }
 
-func (net *FCNNet) lossGrads() []float64 {
+func (net *MLP) lossGrads() []float64 {
 	outputLayer := net.layers[len(net.layers)-1]
 	return net.loss.Grads(outputLayer.output(), net.desiredOutputs)
 }
 
-func (net *FCNNet) backwardPropagate() {
+func (net *MLP) backwardPropagate() {
 	l := len(net.layers) - 1
 	// Output layer back propagation.
 	net.layers[l].backward(net.layers[l-1], nil, net.lossGrads())
@@ -149,7 +148,7 @@ func (net *FCNNet) backwardPropagate() {
 }
 
 // PropagateSamples propagates with one training sample to tune the weights.
-func (net *FCNNet) PropagateSamples(samples []util.Sample) {
+func (net *MLP) PropagateSamples(samples []util.Sample) {
 	net.ZeroGrads()
 	for _, sample := range samples {
 		net.feedInputSample(sample.X, sample.Y)
@@ -166,7 +165,7 @@ func (net *FCNNet) PropagateSamples(samples []util.Sample) {
 }
 
 // Predict predicts the result with the trained model given the input `xs`.
-func (net *FCNNet) Predict(xs []float64) (prediction []float64) {
+func (net *MLP) Predict(xs []float64) (prediction []float64) {
 	net.feedInputSample(xs, nil)
 	net.forwardPropagate()
 	for j, n := range net.layers[len(net.layers)-1].neurons {
@@ -181,7 +180,7 @@ func (net *FCNNet) Predict(xs []float64) (prediction []float64) {
 // UpdateWeights update weights with the given learning rate `η` for one-round
 // propagation and returns how much the weights has changed (in terms of the
 // norm of all weights, delta) in this update.
-func (net *FCNNet) UpdateWeights(eta float64) float64 {
+func (net *MLP) UpdateWeights(eta float64) float64 {
 	// delta is the change in the norm of weights
 	var delta float64
 	for i, l := range net.layers {
@@ -194,7 +193,7 @@ func (net *FCNNet) UpdateWeights(eta float64) float64 {
 }
 
 // Print prints the network to the console.
-func (net *FCNNet) Print() {
+func (net *MLP) Print() {
 	fmt.Println("\n## Neural network")
 	for i, l := range net.layers {
 		fmt.Printf("--------------- Layer %d: %d neurons (activator: %s) ---------------\n", i, l.size, l.activator)

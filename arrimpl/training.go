@@ -6,12 +6,12 @@ import (
 	"github.com/Lucas-884e/gonet/util"
 )
 
-func NewTrainer(model *FCNNet, isCorrect util.IsCorrectFunc) *Trainer {
+func NewTrainer(model *MLP, isCorrect util.IsCorrectFunc) *Trainer {
 	return &Trainer{model: model, isCorrect: isCorrect}
 }
 
 type Trainer struct {
-	model     *FCNNet
+	model     *MLP
 	isCorrect util.IsCorrectFunc
 }
 

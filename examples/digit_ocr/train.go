@@ -8,8 +8,8 @@ import (
 	"github.com/Lucas-884e/gonet/util"
 )
 
-func constructNonGraphNetwork(inputLayerSize int, hiddenLayerSizes ...int) *arrimpl.FCNNet {
-	nn := arrimpl.NewFCNNet(inputLayerSize, arrimpl.LossCrossEntropy, arrimpl.ReluActivator())
+func constructNonGraphNetwork(inputLayerSize int, hiddenLayerSizes ...int) *arrimpl.MLP {
+	nn := arrimpl.NewMLP(inputLayerSize, arrimpl.LossCrossEntropy, arrimpl.ReluActivator())
 	for _, size := range hiddenLayerSizes {
 		nn.AddLayer(size)
 	}

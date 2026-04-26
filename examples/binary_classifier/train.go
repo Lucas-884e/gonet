@@ -8,9 +8,9 @@ import (
 	"github.com/Lucas-884e/gonet/util"
 )
 
-func constructNonGraphNetwork(hiddenLayerSizes ...int) *arrimpl.FCNNet {
+func constructNonGraphNetwork(hiddenLayerSizes ...int) *arrimpl.MLP {
 	// Must use Tanh activator because the training data has target values within range: [-1, 1]
-	nn := arrimpl.NewFCNNet(2, arrimpl.LossMaxMargin, arrimpl.ReluActivator())
+	nn := arrimpl.NewMLP(2, arrimpl.LossMaxMargin, arrimpl.ReluActivator())
 	for _, size := range hiddenLayerSizes {
 		nn.AddLayer(size)
 	}
