@@ -84,7 +84,7 @@ func (sl *singleLinear) loadWeights(ws []float64) {
 }
 
 func LinearLayer(fanIn, fanOut int, bias bool) Layer {
-	ll := new(linearLayer)
+	ll := &linearLayer{fanIn: fanIn}
 	for range fanOut {
 		ll.neurons = append(ll.neurons, SingleLinear(fanIn, bias))
 	}
@@ -92,10 +92,22 @@ func LinearLayer(fanIn, fanOut int, bias bool) Layer {
 }
 
 type linearLayer struct {
+	fanIn   int
 	neurons []*singleLinear
 }
 
 func (ll *linearLayer) Feed(in []*Node) (out []*Node) {
+	if len(in)%ll.fanIn != 0 {
+		panic("input size is not a multiple of linearLayer.fanIn")
+	}
+
+	for i := 0; i < len(in); i += ll.fanIn {
+		out = append(out, ll.feed(in[i:i+ll.fanIn])...)
+	}
+	return out
+}
+
+func (ll *linearLayer) feed(in []*Node) (out []*Node) {
 	for _, n := range ll.neurons {
 		out = append(out, n.Feed(in)...)
 	}
