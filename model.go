@@ -34,9 +34,9 @@ type sequentialModel struct {
 }
 
 func (sm *sequentialModel) Predict(xs []float64) []float64 {
-	if len(sm.input) > 0 && len(sm.output) > 0 {
-		for i, in := range sm.input {
-			in.SetV(xs[i])
+	if len(sm.input) >= len(xs) {
+		for i, x := range xs {
+			sm.input[i].SetV(x)
 		}
 	} else {
 		sm.input = make([]*Node, len(xs))
@@ -46,10 +46,11 @@ func (sm *sequentialModel) Predict(xs []float64) []float64 {
 		sm.output = sm.Feed(sm.input)
 	}
 
-	for _, out := range sm.output {
+	end := len(xs) * len(sm.output) / len(sm.input)
+	for _, out := range sm.output[:end] {
 		out.Forward()
 	}
-	return NodeValues(sm.output)
+	return NodeValues(sm.output[:end])
 }
 
 func (sm *sequentialModel) Feed(input []*Node) []*Node {

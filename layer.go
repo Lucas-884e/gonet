@@ -231,7 +231,14 @@ type disembeddingLayer struct {
 }
 
 func (dl *disembeddingLayer) Feed(in []*Node) (out []*Node) {
-	return dl.DisembeddingFeed(in, dl.bias)
+	if len(in)%dl.dim != 0 {
+		panic("input size is not a multiple of disembedding.dim")
+	}
+
+	for i := 0; i < len(in); i += dl.dim {
+		out = append(out, dl.DisembeddingFeed(in[i:i+dl.dim], dl.bias)...)
+	}
+	return out
 }
 
 func (dl *disembeddingLayer) Parameters() []util.Parameter {

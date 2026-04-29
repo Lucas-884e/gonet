@@ -1,6 +1,8 @@
 package util
 
-import "slices"
+import (
+	"slices"
+)
 
 type TokenType interface {
 	~string | byte
@@ -22,9 +24,20 @@ func GenVocabFromCorpus[T TokenType](corpus [][]T, eos T) map[T]int {
 	}
 	slices.Sort(tokens)
 
+	// Always set eos index to 0.
 	vocab := map[T]int{eos: 0}
-	for i, token := range tokens {
-		vocab[token] = i + 1
+	if _, ok := tokenSet[eos]; ok {
+		for i, token := range tokens {
+			if token < eos {
+				vocab[token] = i + 1
+			} else if token > eos {
+				vocab[token] = i
+			}
+		}
+	} else {
+		for i, token := range tokens {
+			vocab[token] = i + 1
+		}
 	}
 	return vocab
 }
@@ -37,11 +50,20 @@ func GetIndexToToken[T TokenType](vocab map[T]int) []T {
 	return m
 }
 
-func TokensToIndexes[T TokenType](tokens []T, vocab map[T]int) (indexes []int) {
-	for _, t := range tokens {
-		indexes = append(indexes, vocab[t])
+func TokensToIndexes[T TokenType](tokens []T, vocab map[T]int) []int {
+	indexes := make([]int, len(tokens))
+	for i, t := range tokens {
+		indexes[i] = vocab[t]
 	}
-	return
+	return indexes
+}
+
+func IndexesToTokens[T TokenType](indexes []int, i2t []T) []T {
+	tokens := make([]T, len(indexes))
+	for i, idx := range indexes {
+		tokens[i] = i2t[idx]
+	}
+	return tokens
 }
 
 func GenInputsAndLabelsFromCorpus[T TokenType](corpus [][]T, vocab map[T]int, ctxLen int) ([][]int, []int) {
