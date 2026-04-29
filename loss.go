@@ -93,20 +93,13 @@ func TrainLossFunc(model FeedForwarder, lf LossFunction) E2ELoss {
 				out := model.Feed(s.X)
 				losses[i] = lf(s.Y, out)
 			}
-			loss = BatchLoss(losses...)
+			loss = Mean(losses...)
 		}
 
 		batch.Update(samples)
 		loss.Forward()
 		return loss
 	}
-}
-
-func BatchLoss(losses ...*Node) *Node {
-	if len(losses) == 1 {
-		return losses[0]
-	}
-	return Mean(losses...)
 }
 
 // ResidualSumSquaredLoss is the Residual Sum of Squared (RSS) or Sum of Squared Errors (SSE).
@@ -140,11 +133,15 @@ func ResidualSumSquaredLoss(actual, predicted []*Node) *Node {
 	return out
 }
 
-// CrossEntropyLoss defines the cross-entropy loss function. `actual` represents
+// RawCrossEntropyLoss defines the cross-entropy loss function. `actual` represents
 // the actual probability of each predefined class which should contain only one
 // non-vanishing entry with value 1, meaning this class is observed in the data
 // set sample (hence probability equals 1).
-func CrossEntropyLoss(actual, predicted []*Node) *Node {
+func RawCrossEntropyLoss(actual, predicted []*Node) *Node {
+	if len(predicted) != len(actual) {
+		panic(fmt.Sprintf("Cross-Entropy loss function must receive the same number of predicted values and actual values, got actual %d", len(actual)))
+	}
+
 	var (
 		noGrad = predicted[0].noGrad
 		out    = &Node{
@@ -153,49 +150,6 @@ func CrossEntropyLoss(actual, predicted []*Node) *Node {
 			noGrad: noGrad,
 		}
 	)
-
-	if len(actual) == 1 {
-		// In this case, predicted are actually logits, and the softmax layer is
-		// fused with this loss function.
-		var (
-			qs       = make([]float64, len(predicted))
-			observed int
-		)
-
-		out.forward = func() {
-			var (
-				vmax = slices.MaxFunc(predicted, func(a, b *Node) int { return cmp.Compare(a.v, b.v) }).v
-				sum  float64
-			)
-			for i, n := range predicted {
-				qs[i] = math.Exp(n.v - vmax)
-				sum += qs[i]
-			}
-			for i, q := range qs {
-				qs[i] = q / sum
-			}
-
-			observed = int(actual[0].v)
-			out.v = -math.Log(qs[observed])
-		}
-
-		if !noGrad {
-			out.backward = func() {
-				for i, n := range predicted {
-					if i == observed {
-						n.g += (qs[i] - 1) * out.g
-					} else {
-						n.g += qs[i] * out.g
-					}
-				}
-			}
-		}
-		return out
-	}
-
-	if len(predicted) != len(actual) {
-		panic(fmt.Sprintf("Cross-Entropy loss function must receive the same number of predicted values and actual values, got actual %d", len(actual)))
-	}
 
 	out.forward = func() {
 		var observed int
@@ -225,6 +179,68 @@ func CrossEntropyLoss(actual, predicted []*Node) *Node {
 		}
 	}
 	return out
+}
+
+// CrossEntropyLoss takes softmax activation into account already, so the values
+// in `predicted` nodes are logits rather than probabilities actaully. If you
+// would like to use the cross entropy function without softmax fused into it,
+// use RawCrossEntoryLoss instead. Also note that, different from RawCrossEntoryLoss,
+// all values in `actual` nodes are indexes of ground-truth. So do expect
+// `actual` (indexes) and `predicted` (logits) to be of different lengths.
+func CrossEntropyLoss(actual, predicted []*Node) *Node {
+	if len(predicted)%len(actual) != 0 {
+		panic("number of predicted logits is not a multiple of actual indexes")
+	}
+
+	var (
+		noGrad  = predicted[0].noGrad
+		outs    = make([]*Node, len(actual))
+		nLogits = len(predicted) / len(actual)
+	)
+	for i := range outs {
+		outs[i] = &Node{
+			name:   fmt.Sprintf("cross_entropy[%d]", i),
+			prev:   predicted[i*nLogits : (i+1)*nLogits],
+			noGrad: noGrad,
+		}
+	}
+
+	for i, out := range outs {
+		var (
+			qs       = make([]float64, nLogits) // softmax
+			observed int
+		)
+		out.forward = func() {
+			var (
+				vmax = slices.MaxFunc(out.prev, func(a, b *Node) int { return cmp.Compare(a.v, b.v) }).v
+				sum  float64
+			)
+			for j, n := range out.prev {
+				qs[j] = math.Exp(n.v - vmax)
+				sum += qs[j]
+			}
+			for j, q := range qs {
+				qs[j] = q / sum
+			}
+
+			observed = int(actual[i].v)
+			out.v = -math.Log(qs[observed])
+		}
+
+		if !noGrad {
+			out.backward = func() {
+				for j, n := range out.prev {
+					if j == observed {
+						n.g += (qs[j] - 1) * out.g
+					} else {
+						n.g += qs[j] * out.g
+					}
+				}
+			}
+		}
+	}
+
+	return Mean(outs...)
 }
 
 func MaxMarginLoss(actual, predicted []*Node) *Node {

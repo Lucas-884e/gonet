@@ -11,10 +11,10 @@ func TestBatchLoss(t *testing.T) {
 	var (
 		a = NewNode(1, "a")
 		b = NewNode(2, "b")
-		z = BatchLoss(a, b)
+		z = Mean(a, b)
 	)
 
-	assert.Equal(t, a, BatchLoss(a))
+	assert.Equal(t, a, Mean(a))
 
 	z.ForwardBackward()
 	assert.EqualValues(t, 1.5, z.V())

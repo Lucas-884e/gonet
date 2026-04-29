@@ -55,7 +55,7 @@ func TestNode(t *testing.T) {
 		z2 = zs[1]
 
 		// The 0-th element is observed.
-		ce = CrossEntropyLoss([]*Node{
+		ce = RawCrossEntropyLoss([]*Node{
 			NewInputNode(1, "actual1"),
 			NewInputNode(0, "actual2"),
 		}, zs)

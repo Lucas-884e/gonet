@@ -16,11 +16,14 @@ type Layer interface {
 }
 
 func SingleLinear(inputSize int, bias bool) *singleLinear {
-	sl := new(singleLinear)
+	var (
+		sl         = new(singleLinear)
+		normFactor = math.Sqrt(float64(inputSize))
+	)
 
 	for widx := range inputSize {
 		// Initial weights must be normalized, otherwise training won't converge.
-		w := rand.NormFloat64() / math.Sqrt(float64(inputSize))
+		w := rand.NormFloat64() / normFactor
 		wn := NewNode(w, fmt.Sprintf("W_%d", widx))
 		sl.weights = append(sl.weights, wn)
 	}
@@ -219,8 +222,7 @@ func DisembeddingLayer(emb *Embedding, bias bool) Layer {
 	if bias {
 		dl.bias = make([]*Node, emb.vocabSize)
 		for i := range emb.vocabSize {
-			v := rand.NormFloat64()
-			dl.bias[i] = NewNode(v, fmt.Sprintf("B_%d", i))
+			dl.bias[i] = NewNode(0, fmt.Sprintf("B_%d", i))
 		}
 	}
 	return dl

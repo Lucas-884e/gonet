@@ -3,6 +3,10 @@ package gonet
 import "math"
 
 func Mean(xs ...*Node) *Node {
+	if len(xs) == 1 {
+		return xs[0]
+	}
+
 	divisor := float64(len(xs))
 	mean := &Node{
 		name: "mean",

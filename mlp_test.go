@@ -54,7 +54,7 @@ func TestMLP(t *testing.T) {
 			X: []float64{-5, 2},
 			Y: []float64{1, 0},
 		}
-		lossFn = TrainLossFunc(mlp, CrossEntropyLoss)
+		lossFn = TrainLossFunc(mlp, RawCrossEntropyLoss)
 		loss   = lossFn([]util.Sample{sample})
 	)
 	loss.Backward()
