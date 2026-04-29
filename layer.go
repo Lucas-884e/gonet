@@ -2,6 +2,7 @@ package gonet
 
 import (
 	"fmt"
+	"math"
 	"math/rand/v2"
 	"strings"
 
@@ -18,14 +19,14 @@ func SingleLinear(inputSize int, bias bool) *singleLinear {
 	sl := new(singleLinear)
 
 	for widx := range inputSize {
-		w := rand.NormFloat64()
+		// Initial weights must be normalized, otherwise training won't converge.
+		w := rand.NormFloat64() / math.Sqrt(float64(inputSize))
 		wn := NewNode(w, fmt.Sprintf("W_%d", widx))
 		sl.weights = append(sl.weights, wn)
 	}
 
 	if bias {
-		b := rand.NormFloat64()
-		sl.bias = NewNode(b, "B")
+		sl.bias = NewNode(0, "B")
 	}
 
 	return sl

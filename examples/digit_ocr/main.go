@@ -21,7 +21,6 @@ func main() {
 	var (
 		trainingSet   []util.Sample
 		validationSet []util.Sample
-		testSet       []util.Sample
 	)
 
 	switch *dataset {
@@ -36,7 +35,7 @@ func main() {
 		}
 
 		util.ShuffleSamples(samples)
-		trainingSet, validationSet, testSet = util.SplitDataSet(samples)
+		trainingSet, validationSet, _ = util.SplitDataSet(samples, 0.8, 1.0)
 
 	case "mnist":
 		trainingRecords, err := util.ReadCSVDataSet("data/mnist/training_data.csv")
@@ -56,15 +55,6 @@ func main() {
 		if err != nil {
 			log.Fatal(err)
 		}
-
-		testRecords, err := util.ReadCSVDataSet("data/mnist/test_data.csv")
-		if err != nil {
-			log.Fatal(err)
-		}
-		testSet, err = recordsToTrainingSamples(testRecords)
-		if err != nil {
-			log.Fatal(err)
-		}
 	}
 
 	train := graphTrain
@@ -73,7 +63,7 @@ func main() {
 	}
 
 	start := time.Now()
-	train(trainingSet, validationSet, testSet)
+	train(trainingSet, validationSet)
 	fmt.Println("\nTraining time cost:", time.Since(start))
 }
 

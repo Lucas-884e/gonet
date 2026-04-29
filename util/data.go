@@ -26,11 +26,11 @@ func ReadCSVDataSet(file string) ([][]string, error) {
 	return r.ReadAll()
 }
 
-func SplitDataSet[T any](samples []T) (training, validation, testing []T) {
+func SplitDataSet[T any](samples []T, trainSplit, valSplit float64) (training, validation, testing []T) {
 	var (
-		total           = len(samples)
-		trainingSplit   = 7 * total / 10
-		validationSplit = 9 * total / 10
+		total           = float64(len(samples))
+		trainingSplit   = int(trainSplit * total)
+		validationSplit = int(valSplit * total)
 	)
 	return samples[:trainingSplit], samples[trainingSplit:validationSplit], samples[validationSplit:]
 }

@@ -30,7 +30,7 @@ func main() {
 	normalizeTrainingSamplesByRemovingMeans(samples)
 	util.ShuffleSamples(samples)
 
-	trainingSet, validationSet, testSet := util.SplitDataSet(samples)
+	trainingSet, validationSet, testSet := util.SplitDataSet(samples, 0.7, 0.9)
 	train := graphTrain
 	if *useArray {
 		train = nonGraphTrain
