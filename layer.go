@@ -10,7 +10,7 @@ import (
 )
 
 type Layer interface {
-	Feed([]*Node) []*Node
+	FeedForwarder
 	Parameters() []util.Parameter
 	Name() string
 }
@@ -41,15 +41,7 @@ type singleLinear struct {
 }
 
 func (sl *singleLinear) Feed(in []*Node) []*Node {
-	var wx []*Node
-	for i, w := range sl.weights {
-		wx = append(wx, Multiply(w, in[i]))
-	}
-	if sl.bias != nil {
-		wx = append(wx, sl.bias)
-	}
-	sum := Plus(wx...)
-	return []*Node{sum}
+	return []*Node{Linear(in, sl.weights, sl.bias)}
 }
 
 func (sl *singleLinear) Parameters() []util.Parameter {
@@ -201,7 +193,12 @@ func (sl *softmaxLayer) Feed(in []*Node) []*Node {
 func (sl *softmaxLayer) Parameters() []util.Parameter { return nil }
 func (sl *softmaxLayer) Name() string                 { return "SoftmaxLayer" }
 
-func EmbeddingLayer(emb *Embedding) Layer {
+func EmbeddingLayer(vocabSize, dim int) Layer {
+	emb := NewEmbedding(vocabSize, dim)
+	return EmbeddingLayerFrom(emb)
+}
+
+func EmbeddingLayerFrom(emb *Embedding) Layer {
 	return (*embeddingLayer)(emb)
 }
 
@@ -217,7 +214,12 @@ func (el *embeddingLayer) Parameters() []util.Parameter {
 
 func (el *embeddingLayer) Name() string { return "EmbeddingLayer" }
 
-func DisembeddingLayer(emb *Embedding, bias bool) Layer {
+func DisembeddingLayer(vocabSize, dim int, bias bool) Layer {
+	emb := NewEmbedding(vocabSize, dim)
+	return DisembeddingLayerFrom(emb, bias)
+}
+
+func DisembeddingLayerFrom(emb *Embedding, bias bool) Layer {
 	dl := &disembeddingLayer{Embedding: emb}
 	if bias {
 		dl.bias = make([]*Node, emb.vocabSize)

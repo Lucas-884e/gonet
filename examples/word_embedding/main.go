@@ -51,8 +51,8 @@ func trainEmbeddings(samples []util.Sample, vocabSize, dim int) (emb, disemb *go
 
 	var (
 		model = gonet.SequentialModel(
-			gonet.EmbeddingLayer(emb),
-			gonet.DisembeddingLayer(disemb, false),
+			gonet.EmbeddingLayerFrom(emb),
+			gonet.DisembeddingLayerFrom(disemb, false),
 		)
 		precision = util.PredictionPrecision(model, samples, isCorrect)
 	)

@@ -7,9 +7,8 @@ import (
 )
 
 type Model interface {
-	FeedForwarder
+	Layer
 	util.Predictor
-	Parameters() []util.Parameter
 }
 
 func LinearModel(fanIn, fanOut int, bias bool) Model {
@@ -17,8 +16,7 @@ func LinearModel(fanIn, fanOut int, bias bool) Model {
 }
 
 func EmbeddingModel(vocabSize, dim int) Model {
-	emb := NewEmbedding(vocabSize, dim)
-	return SequentialModel(EmbeddingLayer(emb))
+	return SequentialModel(EmbeddingLayer(vocabSize, dim))
 }
 
 func SequentialModel(layers ...Layer) Model {
@@ -67,3 +65,5 @@ func (sm *sequentialModel) Parameters() (p []util.Parameter) {
 	}
 	return p
 }
+
+func (sm *sequentialModel) Name() string { return "SequentialModel" }

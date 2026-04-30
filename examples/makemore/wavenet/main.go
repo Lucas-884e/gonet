@@ -41,12 +41,12 @@ func main() {
 
 	var (
 		model = gonet.SequentialModel(
-			gonet.EmbeddingLayer(gonet.NewEmbedding(vocabSize, embDim)),
+			gonet.EmbeddingLayer(vocabSize, embDim),
 			gonet.LinearLayer(embDim*2, hidSize, false),
 			gonet.TanhLayer(),
 			gonet.LinearLayer(hidSize*2, hidSize, false),
 			gonet.TanhLayer(),
-			gonet.DisembeddingLayer(gonet.NewEmbedding(vocabSize, hidSize), true),
+			gonet.DisembeddingLayer(vocabSize, hidSize, true),
 		)
 		pnext = func(in ...int) []float64 {
 			xs := util.NumberSliceConvert[int, float64](in)

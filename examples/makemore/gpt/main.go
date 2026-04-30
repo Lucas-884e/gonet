@@ -20,14 +20,14 @@ var (
 const (
 	ctxLen   = 2 // context length
 	embDim   = 2 // embedding space dimension
-	headNum  = 2 // number of attention heads
-	layerNum = 2 // number of attention layers
+	headNum  = 1 // number of attention heads
+	layerNum = 1 // number of attention layers
 )
 
 func main() {
 	flag.Parse()
 
-	corpus := util.Must1(os.ReadFile(*data))
+	corpus := util.Must1(os.ReadFile(*data))[:10000]
 	log.Printf("First 300 characters from corpus (size=%d): \n<|BEGIN|>\n%s\n<|END|>", len(corpus), corpus[:300])
 	c2i := util.GenVocabFromCorpus([][]byte{corpus}, '\n')
 	i2c := util.GetIndexToToken(c2i)
@@ -42,19 +42,20 @@ func main() {
 	log.Printf("Training set size=%d, validation set size=%d", trainSize, len(valSet))
 
 	model := gonet.SequentialModel(
-		gonet.EmbeddingLayer(gonet.NewEmbedding(vocabSize, embDim)),
-		gonet.DisembeddingLayer(gonet.NewEmbedding(vocabSize, embDim), true),
+		gonet.EmbeddingLayer(vocabSize, embDim),
+		gonet.AttentionBlockLayer(embDim, headNum, gonet.MaskedSelfAttentionLayer),
+		gonet.DisembeddingLayer(vocabSize, embDim, true),
 	)
 	log.Printf("Generate:\n<|BEGIN|>\n%s\n<|END|>", generate(model, c2i, i2c, 100))
 
 	cfg := util.TrainConfig{
-		BatchSize:        50,
-		Epochs:           100,
+		BatchSize:        20,
+		Epochs:           50,
 		LearningRate:     0.01,
-		LogEpochInterval: 20,
+		LogEpochInterval: 10,
 	}
 	util.InteractiveTrain(&cfg, *interactive, func() time.Duration {
-		samples := randSamples(trainSet, ctxLen, 500)
+		samples := randSamples(trainSet, ctxLen, 10000)
 		return gonet.Train(model, samples, &cfg, gonet.CrossEntropyLoss)
 	})
 

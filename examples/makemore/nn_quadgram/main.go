@@ -31,12 +31,11 @@ type Model struct {
 
 func newModel(vocabSize int) *Model {
 	emb := gonet.NewEmbedding(vocabSize, embDim)
-	disemb := gonet.NewEmbedding(vocabSize, hidSize)
 	m := gonet.SequentialModel(
-		gonet.EmbeddingLayer(emb),
+		gonet.EmbeddingLayerFrom(emb),
 		gonet.LinearLayer(embDim*ctxLen, hidSize, true),
 		gonet.TanhLayer(),
-		gonet.DisembeddingLayer(disemb, true),
+		gonet.DisembeddingLayer(vocabSize, hidSize, true),
 	)
 
 	return &Model{
