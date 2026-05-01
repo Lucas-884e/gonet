@@ -102,6 +102,7 @@ func LayerNormLayer(dim int) Layer {
 		beta[i] = NewNode(rand.NormFloat64(), fmt.Sprintf("beta_%d", i))
 	}
 	return &layerNormLayer{
+		dim:   dim,
 		gamma: gamma,
 		beta:  beta,
 		eps:   1e-5,
@@ -109,13 +110,21 @@ func LayerNormLayer(dim int) Layer {
 }
 
 type layerNormLayer struct {
+	dim   int
 	gamma []*Node
 	beta  []*Node
 	eps   float64
 }
 
 func (lnl *layerNormLayer) Feed(in []*Node) (out []*Node) {
-	return LayerNorm(in, lnl.gamma, lnl.beta, lnl.eps)
+	if len(in)%lnl.dim != 0 {
+		panic("input size is not a multiple of layerNormLayer.dim")
+	}
+
+	for i := 0; i < len(in); i += lnl.dim {
+		out = append(out, LayerNorm(in[i:i+lnl.dim], lnl.gamma, lnl.beta, lnl.eps)...)
+	}
+	return out
 }
 
 func (lnl *layerNormLayer) Parameters() []util.Parameter {

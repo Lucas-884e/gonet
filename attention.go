@@ -163,24 +163,31 @@ func AttentionBlockLayer(embDim, headNum int, buildAttention func(int, int) Laye
 			ReluLayer(),
 			LinearLayer(4*embDim, embDim, true),
 		),
+		norm1: LayerNormLayer(embDim),
+		norm2: LayerNormLayer(embDim),
 	}
 }
 
 type attentionBlockLayer struct {
 	attention Layer // Multi-Head Atention
 	ffwd      Layer // Feedforward layer
+	norm1     Layer // Layer Normalization layer before attention
+	norm2     Layer // Layer Normalization layer before feedforward
 }
 
 func (abl *attentionBlockLayer) Feed(in []*Node) (out []*Node) {
 	var (
-		values = abl.attention.Feed(in)
+		values = abl.attention.Feed(abl.norm1.Feed(in))
 		ffwdIn = VectorAdd(in, values)
 	)
-	return VectorAdd(ffwdIn, abl.ffwd.Feed(ffwdIn))
+	return VectorAdd(ffwdIn, abl.ffwd.Feed(abl.norm1.Feed(ffwdIn)))
 }
 
 func (abl *attentionBlockLayer) Parameters() []util.Parameter {
-	return append(abl.attention.Parameters(), abl.ffwd.Parameters()...)
+	p := abl.attention.Parameters()
+	p = append(p, abl.ffwd.Parameters()...)
+	p = append(p, abl.norm1.Parameters()...)
+	return append(p, abl.norm2.Parameters()...)
 }
 
 func (*attentionBlockLayer) Name() string { return "AttentionBlockLayer" }

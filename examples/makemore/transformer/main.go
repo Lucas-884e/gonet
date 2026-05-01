@@ -17,10 +17,10 @@ var (
 )
 
 const (
-	ctxLen   = 4 // context length
-	layerNum = 1 // number of attention layers
-	headNum  = 2 // number of attention heads
-	embDim   = 4 // embedding space dimension
+	ctxLen   = 4  // context length
+	layerNum = 1  // number of attention layers
+	headNum  = 4  // number of attention heads
+	embDim   = 32 // embedding space dimension
 )
 
 func main() {
@@ -45,8 +45,8 @@ func main() {
 
 	cfg := util.TrainConfig{
 		BatchSize:        20,
-		Epochs:           50,
-		LearningRate:     0.001,
+		Epochs:           20,
+		LearningRate:     0.003,
 		LogEpochInterval: 10,
 	}
 	util.InteractiveTrain(&cfg, *interactive, func() time.Duration {
