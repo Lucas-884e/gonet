@@ -30,14 +30,14 @@ func main() {
 	normalizeTrainingSamplesByRemovingMeans(samples)
 	util.ShuffleSamples(samples)
 
-	trainingSet, validationSet, testSet := util.SplitDataSet(samples, 0.7, 0.9)
+	trainingSet, validationSet, _ := util.SplitDataSet(samples, 0.8, 1.0)
 	train := graphTrain
 	if *useArray {
 		train = nonGraphTrain
 	}
 
 	start := time.Now()
-	train(trainingSet, validationSet, testSet)
+	train(trainingSet, validationSet)
 	fmt.Println("\nTraining time cost:", time.Since(start))
 }
 

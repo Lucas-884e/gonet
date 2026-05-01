@@ -54,8 +54,8 @@ func graphTrain(trainingSet, validationSet []util.Sample) {
 	var (
 		inputLayerSize = len(trainingSet[0].X)
 		mlp            = constructGraphNetwork(inputLayerSize, 32, 16)
+		precision      = util.PredictionPrecision(mlp, validationSet, isCorrect)
 	)
-	precision := util.PredictionPrecision(mlp, validationSet, isCorrect)
 	log.Printf("[Before training] Validation set prediction precision: %g", precision)
 
 	var (

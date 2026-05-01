@@ -19,13 +19,12 @@ func constructNonGraphNetwork(hiddenLayerSizes ...int) *arrimpl.MLP {
 	return nn
 }
 
-func nonGraphTrain(trainingSet, validationSet, testSet []util.Sample) {
+func nonGraphTrain(trainingSet, validationSet []util.Sample) {
 	nn := constructNonGraphNetwork(8)
 	tr := arrimpl.NewTrainer(nn, func(pred, actual []float64) bool {
 		return pred[0]*actual[0] > 0
 	})
-	log.Printf("(Before training) Prediction precision: validation set = %g | test set = %g",
-		tr.PredictionPrecision(validationSet), tr.PredictionPrecision(testSet))
+	log.Printf("[Before training] validation set prediction precision: %g", tr.PredictionPrecision(validationSet))
 
 	tr.Train(util.TrainConfig{
 		BatchSize:    20,
@@ -35,28 +34,30 @@ func nonGraphTrain(trainingSet, validationSet, testSet []util.Sample) {
 	}, trainingSet, validationSet)
 
 	nn.Print()
-	log.Println("(After training) Test set prediction precision:", tr.PredictionPrecision(testSet))
+	log.Println("[After training] Validation set prediction precision:", tr.PredictionPrecision(validationSet))
 }
 
-func constructGraphNetwork(hiddenLayerSizes ...int) *gonet.MLP {
-	mlp := gonet.NewMLP(2)
-	for _, size := range hiddenLayerSizes {
-		mlp.AddLayer(size, gonet.OpRelu, true)
+func constructGraphNetwork(hiddenLayerSizes ...int) gonet.Model {
+	var (
+		fanIn  = 2
+		layers []gonet.Layer
+	)
+	for _, fanOut := range hiddenLayerSizes {
+		layers = append(layers,
+			gonet.LinearLayer(fanIn, fanOut, true),
+			gonet.ReluLayer())
+		fanIn = fanOut
 	}
-	mlp.AddLayer(1, gonet.OpNone, true)
-	return mlp
+	layers = append(layers, gonet.LinearLayer(fanIn, 1, true))
+	return gonet.SequentialModel(layers...)
 }
 
-func graphTrain(trainingSet, validationSet, testSet []util.Sample) {
+func graphTrain(trainingSet, validationSet []util.Sample) {
 	var (
 		mlp       = constructGraphNetwork(8)
-		lossFn    = gonet.TrainLossFunc(mlp, gonet.MaxMarginLoss)
 		isCorrect = func(pred, actual []float64) bool { return pred[0]*actual[0] > 0 }
-		tsSize    = len(trainingSet)
-		delta     float64
+		precision = util.PredictionPrecision(mlp, validationSet, isCorrect)
 	)
-
-	precision := util.PredictionPrecision(mlp, validationSet, isCorrect)
 	log.Printf("[Before training] Validation set prediction precision: %g", precision)
 
 	var (
@@ -66,30 +67,10 @@ func graphTrain(trainingSet, validationSet, testSet []util.Sample) {
 			StopEps:      0,
 			LearningRate: 0.03,
 		}
-		optimizer = util.DefaultAdamOptimizer(mlp.Parameters(), cfg.LearningRate)
-		loss      *gonet.Node
+		timeCost = gonet.Train(mlp, trainingSet, &cfg, gonet.MaxMarginLoss)
 	)
-train:
-	for ep := 0; ep < cfg.Epochs; ep++ {
-		// Shuffle before each epoch.
-		util.ShuffleSamples(trainingSet)
-		for start := 0; start < tsSize; start += cfg.BatchSize {
-			end := min(start+cfg.BatchSize, tsSize)
-			loss = lossFn(trainingSet[start:end])
-			loss.Backward()
+	log.Printf("Training time cost: %s", timeCost)
 
-			if delta = optimizer.Learn(); delta < cfg.StopEps {
-				log.Printf("* Reached stopping criterion (delta = %g < %g).", delta, cfg.StopEps)
-				break train
-			}
-		}
-
-		if ep%5 == 0 || ep+1 == cfg.Epochs {
-			precision := util.PredictionPrecision(mlp, validationSet, isCorrect)
-			log.Printf("[Epoch %d] Validation set prediction precision (delta=%g): %g", ep+1, delta, precision)
-		}
-	}
-
-	precision = util.PredictionPrecision(mlp, testSet, isCorrect)
-	log.Printf("[After training] Test set prediction precision: %g", precision)
+	precision = util.PredictionPrecision(mlp, validationSet, isCorrect)
+	log.Printf("[After training] Validation set prediction precision: %g", precision)
 }
