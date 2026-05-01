@@ -8,19 +8,6 @@ import (
 	"strings"
 )
 
-//go:generate stringer -type=Operator
-type Operator int32
-
-const (
-	OpNone Operator = iota
-	OpPlus
-	OpMultiply
-	OpRelu
-	OpSigmoid
-	OpTanh
-	OpSoftmax
-)
-
 func Identity(n *Node) *Node { return n }
 
 func Plus(prev ...*Node) *Node {
@@ -36,7 +23,6 @@ func Plus(prev ...*Node) *Node {
 		noGrad = prev[0].noGrad
 		out    = &Node{
 			name:   strings.Join(names, "+"),
-			op:     OpPlus,
 			prev:   prev,
 			noGrad: noGrad,
 		}
@@ -70,18 +56,13 @@ func Multiply(prev ...*Node) *Node {
 		noGrad bool
 	)
 	for _, n := range prev {
-		if n.op == OpPlus {
-			names = append(names, "("+n.name+")")
-		} else {
-			names = append(names, n.name)
-		}
+		names = append(names, "("+n.name+")")
 		if n.noGrad {
 			noGrad = true
 		}
 	}
 	out := &Node{
 		name:   strings.Join(names, "×"),
-		op:     OpMultiply,
 		prev:   prev,
 		noGrad: noGrad,
 	}
@@ -113,7 +94,6 @@ func Multiply(prev ...*Node) *Node {
 func Relu(prev *Node) *Node {
 	out := &Node{
 		name:   fmt.Sprintf("relu(%s)", prev.name),
-		op:     OpRelu,
 		prev:   []*Node{prev},
 		noGrad: prev.noGrad,
 	}
@@ -136,7 +116,6 @@ func Relu(prev *Node) *Node {
 func Sigmoid(prev *Node) *Node {
 	out := &Node{
 		name:   fmt.Sprintf("σ(%s)", prev.name),
-		op:     OpSigmoid,
 		prev:   []*Node{prev},
 		noGrad: prev.noGrad,
 	}
@@ -154,7 +133,6 @@ func Sigmoid(prev *Node) *Node {
 func Tanh(prev *Node) *Node {
 	out := &Node{
 		name:   fmt.Sprintf("tanh(%s)", prev.name),
-		op:     OpTanh,
 		prev:   []*Node{prev},
 		noGrad: prev.noGrad,
 	}
@@ -182,7 +160,6 @@ func Softmax(t float64, prev ...*Node) []*Node {
 	for i := range prev {
 		outs[i] = &Node{
 			name:   fmt.Sprintf("softmax[index=%d](T=%g)", i, t),
-			op:     OpSoftmax,
 			prev:   prev,
 			noGrad: noGrad,
 		}
@@ -233,15 +210,46 @@ func Softmax(t float64, prev ...*Node) []*Node {
 	return outs
 }
 
-func InnerProd(left, right []*Node, bias *Node) *Node {
-	var prod []*Node
-	for i, v := range right {
-		prod = append(prod, Multiply(v, left[i]))
-	}
+func Linear(ws, xs []*Node, bias *Node) *Node {
+	var (
+		noGrad = cmp.Or(ws[0].noGrad, xs[0].noGrad)
+		out    = &Node{
+			name:   "linear",
+			prev:   append(ws, xs...),
+			noGrad: noGrad,
+		}
+	)
 	if bias != nil {
-		prod = append(prod, bias)
+		out.prev = append(out.prev, bias)
 	}
-	return Plus(prod...)
+
+	out.forward = func() {
+		out.v = 0
+		for i, x := range xs {
+			out.v += ws[i].v * x.v
+		}
+		if bias != nil {
+			out.v += bias.v
+		}
+	}
+
+	if !noGrad {
+		out.backward = func() {
+			for i, w := range ws {
+				w.g += xs[i].v * out.g
+				xs[i].g += w.v * out.g
+			}
+			if bias != nil {
+				bias.g += out.g
+			}
+		}
+	}
+
+	return out
+}
+
+func DotProduct(left, right []*Node) *Node {
+	return Linear(left, right, nil)
 }
 
 func VectorAdd(left, right []*Node) (out []*Node) {

@@ -11,7 +11,6 @@ func NewNode(v float64, name string) *Node {
 		name:   name,
 		v:      v,
 		isLeaf: true,
-		op:     OpNone,
 	}
 }
 
@@ -52,7 +51,6 @@ type Node struct {
 	isLeaf  bool // Is current node a leaf node (ie, not a composite note generated from a few other nodes)
 	isInput bool // Is current node an input node (input values for neural network input layer)?
 	noGrad  bool
-	op      Operator
 	prev    []*Node // previous node
 
 	v            float64 // value of current node, computed with `forward`

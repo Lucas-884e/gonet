@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"math"
 	"math/rand/v2"
-	"strings"
 
 	"github.com/Lucas-884e/gonet/util"
 )
@@ -41,7 +40,7 @@ type singleLinear struct {
 }
 
 func (sl *singleLinear) Feed(in []*Node) []*Node {
-	return []*Node{InnerProd(in, sl.weights, sl.bias)}
+	return []*Node{Linear(in, sl.weights, sl.bias)}
 }
 
 func (sl *singleLinear) Parameters() []util.Parameter {
@@ -53,31 +52,6 @@ func (sl *singleLinear) Parameters() []util.Parameter {
 }
 
 func (sl *singleLinear) Name() string { return "SingleLinear" }
-
-func (sl *singleLinear) String() string {
-	const maxPrint = 10 // Print at most 10 weights
-	ws := make([]string, min(len(sl.weights), maxPrint))
-	for i, w := range sl.weights {
-		ws[i] = fmt.Sprintf("W[%d]=%.6g", i, w.V())
-		if i == maxPrint-1 {
-			ws = append(ws, "...")
-			break
-		}
-	}
-	if sl.bias != nil {
-		ws = append(ws, fmt.Sprintf("Bias=%.6g", sl.bias.V()))
-	}
-	return strings.Join(ws, " | ")
-}
-
-func (sl *singleLinear) loadWeights(ws []float64) {
-	for i, w := range sl.weights {
-		w.v = ws[i]
-	}
-	if sl.bias != nil {
-		sl.bias.v = ws[len(ws)-1]
-	}
-}
 
 func LinearLayer(fanIn, fanOut int, bias bool) Layer {
 	ll := &linearLayer{fanIn: fanIn}
@@ -118,12 +92,6 @@ func (ll *linearLayer) Parameters() (p []util.Parameter) {
 }
 
 func (ll *linearLayer) Name() string { return "LinearLayer" }
-
-func (ll *linearLayer) loadWeights(ws [][]float64) {
-	for i, n := range ll.neurons {
-		n.loadWeights(ws[i])
-	}
-}
 
 func ReluLayer() Layer    { return acRelu }
 func SigmoidLayer() Layer { return acSigmoid }

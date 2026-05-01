@@ -61,7 +61,7 @@ func splitKQV[T any](kqv []T, hs int) (ks, qs, vs [][]T) {
 func MaskedAttention(ks, qs, vs [][]*Node) []*Node {
 	var (
 		multiply = func(a, b []*Node) *Node {
-			return InnerProd(a, b, nil)
+			return DotProduct(a, b)
 		}
 
 		temperature = math.Sqrt(float64(len(ks[0])))
