@@ -67,7 +67,7 @@ func (e *Embedding) EmbeddingFeed(in []*Node) (out []*Node) {
 	return out
 }
 
-func (e *Embedding) DisembeddingFeed(in, bias []*Node) (out []*Node) {
+func (e *Embedding) UnembeddingFeed(in, bias []*Node) (out []*Node) {
 	if len(in) != e.dim {
 		panic(fmt.Sprintf("Feed input size %d does not match embedding dimension %d", len(in), e.dim))
 	}
@@ -131,13 +131,13 @@ func (el *embeddingLayer) Parameters() []util.Parameter {
 
 func (*embeddingLayer) Name() string { return "EmbeddingLayer" }
 
-func DisembeddingLayer(vocabSize, dim int, bias bool) Layer {
+func UnembeddingLayer(vocabSize, dim int, bias bool) Layer {
 	emb := NewEmbedding(vocabSize, dim)
-	return DisembeddingLayerFrom(emb, bias)
+	return UnembeddingLayerFrom(emb, bias)
 }
 
-func DisembeddingLayerFrom(emb *Embedding, bias bool) Layer {
-	dl := &disembeddingLayer{Embedding: emb}
+func UnembeddingLayerFrom(emb *Embedding, bias bool) Layer {
+	dl := &unembeddingLayer{Embedding: emb}
 	if bias {
 		dl.bias = make([]*Node, emb.vocabSize)
 		for i := range emb.vocabSize {
@@ -147,28 +147,28 @@ func DisembeddingLayerFrom(emb *Embedding, bias bool) Layer {
 	return dl
 }
 
-type disembeddingLayer struct {
+type unembeddingLayer struct {
 	*Embedding
 	bias []*Node
 }
 
-func (dl *disembeddingLayer) Feed(in []*Node) (out []*Node) {
+func (dl *unembeddingLayer) Feed(in []*Node) (out []*Node) {
 	if len(in)%dl.dim != 0 {
-		panic("input size is not a multiple of disembedding.dim")
+		panic("input size is not a multiple of unembedding.dim")
 	}
 
 	for i := 0; i < len(in); i += dl.dim {
-		out = append(out, dl.DisembeddingFeed(in[i:i+dl.dim], dl.bias)...)
+		out = append(out, dl.UnembeddingFeed(in[i:i+dl.dim], dl.bias)...)
 	}
 	return out
 }
 
-func (dl *disembeddingLayer) Parameters() []util.Parameter {
+func (dl *unembeddingLayer) Parameters() []util.Parameter {
 	emb := util.SliceConvert[*Node, util.Parameter](dl.matrix)
 	return append(emb, util.SliceConvert[*Node, util.Parameter](dl.bias)...)
 }
 
-func (*disembeddingLayer) Name() string { return "DisembeddingLayer" }
+func (*unembeddingLayer) Name() string { return "unembeddingLayer" }
 
 func PositionalEmbeddingLayer(vocabSize, ctxLen, dim int) Layer {
 	pos := NewInputNodeBatch(ctxLen, "P_%d", false)

@@ -46,7 +46,7 @@ func main() {
 			gonet.TanhLayer(),
 			gonet.LinearLayer(hidSize*2, hidSize, false),
 			gonet.TanhLayer(),
-			gonet.DisembeddingLayer(vocabSize, hidSize, true),
+			gonet.UnembeddingLayer(vocabSize, hidSize, true),
 		)
 		pnext = func(in ...int) []float64 {
 			xs := util.NumberSliceConvert[int, float64](in)

@@ -87,9 +87,9 @@ func TestNode(t *testing.T) {
 	assert.Equal(t, "σ(b2+w21×x1+w22×x2)", y2.Name())
 
 	assert.InDelta(t, 0.8978002954662286, eta1.V(), eps)
-	assert.Equal(t, "c1+u11×σ(b1+w11×x1+w12×x2)+u12×σ(b2+w21×x1+w22×x2)", eta1.Name())
+	assert.Equal(t, "c1+u11×(σ(b1+w11×x1+w12×x2))+u12×(σ(b2+w21×x1+w22×x2))", eta1.Name())
 	assert.InDelta(t, 1.16045163854517, eta2.V(), eps)
-	assert.Equal(t, "c2+u21×σ(b1+w11×x1+w12×x2)+u22×σ(b2+w21×x1+w22×x2)", eta2.Name())
+	assert.Equal(t, "c2+u21×(σ(b1+w11×x1+w12×x2))+u22×(σ(b2+w21×x1+w22×x2))", eta2.Name())
 
 	assert.InDelta(t, 0.4672156862802709, z1.V(), eps)
 	assert.Equal(t, "softmax[index=0](T=2)", z1.Name())

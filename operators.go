@@ -56,7 +56,11 @@ func Multiply(prev ...*Node) *Node {
 		noGrad bool
 	)
 	for _, n := range prev {
-		names = append(names, "("+n.name+")")
+		if n.isLeaf {
+			names = append(names, n.name)
+		} else {
+			names = append(names, "("+n.name+")")
+		}
 		if n.noGrad {
 			noGrad = true
 		}

@@ -17,19 +17,19 @@ var (
 )
 
 const (
-	ctxLen   = 4  // context length
+	ctxLen   = 8  // context length
 	layerNum = 2  // number of attention layers
 	headNum  = 4  // number of attention heads
-	embDim   = 32 // embedding space dimension
+	embDim   = 64 // embedding space dimension
 
 	learningRate    = 0.003
-	samplesPerEpoch = 1000
+	samplesPerEpoch = 2000
 )
 
 func main() {
 	flag.Parse()
 
-	corpus := util.Must1(os.ReadFile(*data))[:10000]
+	corpus := util.Must1(os.ReadFile(*data))[:20000]
 	log.Printf("First 300 characters from corpus (size=%d): \n<|BEGIN|>\n%s\n<|END|>", len(corpus), corpus[:300])
 	c2i := util.GenVocabFromCorpus([][]byte{corpus}, '\n')
 	i2c := util.GetIndexToToken(c2i)

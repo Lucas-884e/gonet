@@ -23,7 +23,7 @@ func main() {
 
 	inputs, labels := util.GenInputsAndLabelsFromCorpus(sentences, vocab, 1)
 	samples := util.GenDatasetFromInputsAndLabels(inputs, labels)
-	emb, disemb := trainEmbeddings(samples, vocabSize, 2)
+	emb, unemb := trainEmbeddings(samples, vocabSize, 2)
 
 	fmt.Println()
 	log.Print("Vocabulary: ", vocab)
@@ -35,24 +35,24 @@ func main() {
 
 	log.Print("Embeddings: -------------------")
 	for i := range vocabSize {
-		log.Printf("%10s | %s | %s", idxToToken[i], emb.S(i), disemb.S(i))
+		log.Printf("%10s | %s | %s", idxToToken[i], emb.S(i), unemb.S(i))
 	}
 
 	godzillaIndex := vocab["Godzilla"]
 	ironmanIndex := vocab["Ironman"]
 	diff1 := emb.Sub(godzillaIndex, ironmanIndex)
-	diff2 := disemb.Sub(godzillaIndex, ironmanIndex)
+	diff2 := unemb.Sub(godzillaIndex, ironmanIndex)
 	log.Printf("(%s - %s) = %.4f | %.4f", idxToToken[godzillaIndex], idxToToken[ironmanIndex], diff1, diff2)
 }
 
-func trainEmbeddings(samples []util.Sample, vocabSize, dim int) (emb, disemb *gonet.Embedding) {
+func trainEmbeddings(samples []util.Sample, vocabSize, dim int) (emb, unemb *gonet.Embedding) {
 	emb = gonet.NewEmbedding(vocabSize, dim)
-	disemb = gonet.NewEmbedding(vocabSize, dim)
+	unemb = gonet.NewEmbedding(vocabSize, dim)
 
 	var (
 		model = gonet.SequentialModel(
 			gonet.EmbeddingLayerFrom(emb),
-			gonet.DisembeddingLayerFrom(disemb, false),
+			gonet.UnembeddingLayerFrom(unemb, false),
 		)
 		precision = util.PredictionPrecision(model, samples, isCorrect)
 	)

@@ -35,7 +35,7 @@ func newModel(vocabSize int) *Model {
 		gonet.EmbeddingLayerFrom(emb),
 		gonet.LinearLayer(embDim*ctxLen, hidSize, true),
 		gonet.TanhLayer(),
-		gonet.DisembeddingLayer(vocabSize, hidSize, true),
+		gonet.UnembeddingLayer(vocabSize, hidSize, true),
 	)
 
 	return &Model{
