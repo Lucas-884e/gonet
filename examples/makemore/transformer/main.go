@@ -18,15 +18,18 @@ var (
 
 const (
 	ctxLen   = 4  // context length
-	layerNum = 1  // number of attention layers
+	layerNum = 2  // number of attention layers
 	headNum  = 4  // number of attention heads
 	embDim   = 32 // embedding space dimension
+
+	learningRate    = 0.003
+	samplesPerEpoch = 1000
 )
 
 func main() {
 	flag.Parse()
 
-	corpus := util.Must1(os.ReadFile(*data))[:3000]
+	corpus := util.Must1(os.ReadFile(*data))[:10000]
 	log.Printf("First 300 characters from corpus (size=%d): \n<|BEGIN|>\n%s\n<|END|>", len(corpus), corpus[:300])
 	c2i := util.GenVocabFromCorpus([][]byte{corpus}, '\n')
 	i2c := util.GetIndexToToken(c2i)
@@ -46,15 +49,15 @@ func main() {
 	cfg := util.TrainConfig{
 		BatchSize:        20,
 		Epochs:           20,
-		LearningRate:     0.003,
+		LearningRate:     learningRate,
 		LogEpochInterval: 10,
 	}
 	util.InteractiveTrain(&cfg, *interactive, func() time.Duration {
-		samples := randSamples(trainSet, ctxLen, 600)
+		samples := randSamples(trainSet, ctxLen, samplesPerEpoch)
 		return gonet.Train(model, samples, &cfg, gonet.CrossEntropyLoss)
 	})
 
-	log.Printf("Generate:\n<|BEGIN|>\n%s\n<|END|>", generate(model, c2i, i2c, 100))
+	log.Printf("Generate:\n<|BEGIN|>\n%s\n<|END|>", generate(model, c2i, i2c, 200))
 }
 
 func generate(model gonet.Model, c2i map[byte]int, i2c []byte, maxGenTokens int, ctx ...byte) []byte {
