@@ -41,7 +41,7 @@ type singleLinear struct {
 }
 
 func (sl *singleLinear) Feed(in []*Node) []*Node {
-	return []*Node{Linear(in, sl.weights, sl.bias)}
+	return []*Node{InnerProd(in, sl.weights, sl.bias)}
 }
 
 func (sl *singleLinear) Parameters() []util.Parameter {
@@ -192,96 +192,3 @@ func (sl *softmaxLayer) Feed(in []*Node) []*Node {
 
 func (sl *softmaxLayer) Parameters() []util.Parameter { return nil }
 func (sl *softmaxLayer) Name() string                 { return "SoftmaxLayer" }
-
-func EmbeddingLayer(vocabSize, dim int) Layer {
-	emb := NewEmbedding(vocabSize, dim)
-	return EmbeddingLayerFrom(emb)
-}
-
-func EmbeddingLayerFrom(emb *Embedding) Layer {
-	return (*embeddingLayer)(emb)
-}
-
-type embeddingLayer Embedding
-
-func (el *embeddingLayer) Feed(in []*Node) (out []*Node) {
-	return (*Embedding)(el).EmbeddingFeed(in)
-}
-
-func (el *embeddingLayer) Parameters() []util.Parameter {
-	return util.SliceConvert[*Node, util.Parameter](el.matrix)
-}
-
-func (el *embeddingLayer) Name() string { return "EmbeddingLayer" }
-
-func DisembeddingLayer(vocabSize, dim int, bias bool) Layer {
-	emb := NewEmbedding(vocabSize, dim)
-	return DisembeddingLayerFrom(emb, bias)
-}
-
-func DisembeddingLayerFrom(emb *Embedding, bias bool) Layer {
-	dl := &disembeddingLayer{Embedding: emb}
-	if bias {
-		dl.bias = make([]*Node, emb.vocabSize)
-		for i := range emb.vocabSize {
-			dl.bias[i] = NewNode(0, fmt.Sprintf("B_%d", i))
-		}
-	}
-	return dl
-}
-
-type disembeddingLayer struct {
-	*Embedding
-	bias []*Node
-}
-
-func (dl *disembeddingLayer) Feed(in []*Node) (out []*Node) {
-	if len(in)%dl.dim != 0 {
-		panic("input size is not a multiple of disembedding.dim")
-	}
-
-	for i := 0; i < len(in); i += dl.dim {
-		out = append(out, dl.DisembeddingFeed(in[i:i+dl.dim], dl.bias)...)
-	}
-	return out
-}
-
-func (dl *disembeddingLayer) Parameters() []util.Parameter {
-	emb := util.SliceConvert[*Node, util.Parameter](dl.matrix)
-	return append(emb, util.SliceConvert[*Node, util.Parameter](dl.bias)...)
-}
-
-func (dl *disembeddingLayer) Name() string { return "DisembeddingLayer" }
-
-func LayerNormLayer(dim int) Layer {
-	var (
-		gamma = make([]*Node, dim)
-		beta  = make([]*Node, dim)
-	)
-	for i := range dim {
-		gamma[i] = NewNode(rand.NormFloat64(), fmt.Sprintf("gamma_%d", i))
-		beta[i] = NewNode(rand.NormFloat64(), fmt.Sprintf("beta_%d", i))
-	}
-	return &layerNormLayer{
-		gamma: gamma,
-		beta:  beta,
-		eps:   1e-5,
-	}
-}
-
-type layerNormLayer struct {
-	gamma []*Node
-	beta  []*Node
-	eps   float64
-}
-
-func (lnl *layerNormLayer) Feed(in []*Node) (out []*Node) {
-	return LayerNorm(in, lnl.gamma, lnl.beta, lnl.eps)
-}
-
-func (lnl *layerNormLayer) Parameters() []util.Parameter {
-	return append(util.SliceConvert[*Node, util.Parameter](lnl.gamma),
-		util.SliceConvert[*Node, util.Parameter](lnl.beta)...)
-}
-
-func (lnl *layerNormLayer) Name() string { return "LayerNormalizationLayer" }

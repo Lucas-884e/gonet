@@ -5,6 +5,8 @@ import (
 	"math"
 	"math/rand/v2"
 	"strings"
+
+	"github.com/Lucas-884e/gonet/util"
 )
 
 func NewEmbedding(vocabSize, dim int) *Embedding {
@@ -107,3 +109,98 @@ func (e *Embedding) S(index int) string {
 	sb.WriteByte(']')
 	return sb.String()
 }
+
+func EmbeddingLayer(vocabSize, dim int) Layer {
+	emb := NewEmbedding(vocabSize, dim)
+	return EmbeddingLayerFrom(emb)
+}
+
+func EmbeddingLayerFrom(emb *Embedding) Layer {
+	return (*embeddingLayer)(emb)
+}
+
+type embeddingLayer Embedding
+
+func (el *embeddingLayer) Feed(in []*Node) (out []*Node) {
+	return (*Embedding)(el).EmbeddingFeed(in)
+}
+
+func (el *embeddingLayer) Parameters() []util.Parameter {
+	return util.SliceConvert[*Node, util.Parameter](el.matrix)
+}
+
+func (*embeddingLayer) Name() string { return "EmbeddingLayer" }
+
+func DisembeddingLayer(vocabSize, dim int, bias bool) Layer {
+	emb := NewEmbedding(vocabSize, dim)
+	return DisembeddingLayerFrom(emb, bias)
+}
+
+func DisembeddingLayerFrom(emb *Embedding, bias bool) Layer {
+	dl := &disembeddingLayer{Embedding: emb}
+	if bias {
+		dl.bias = make([]*Node, emb.vocabSize)
+		for i := range emb.vocabSize {
+			dl.bias[i] = NewNode(0, fmt.Sprintf("B_%d", i))
+		}
+	}
+	return dl
+}
+
+type disembeddingLayer struct {
+	*Embedding
+	bias []*Node
+}
+
+func (dl *disembeddingLayer) Feed(in []*Node) (out []*Node) {
+	if len(in)%dl.dim != 0 {
+		panic("input size is not a multiple of disembedding.dim")
+	}
+
+	for i := 0; i < len(in); i += dl.dim {
+		out = append(out, dl.DisembeddingFeed(in[i:i+dl.dim], dl.bias)...)
+	}
+	return out
+}
+
+func (dl *disembeddingLayer) Parameters() []util.Parameter {
+	emb := util.SliceConvert[*Node, util.Parameter](dl.matrix)
+	return append(emb, util.SliceConvert[*Node, util.Parameter](dl.bias)...)
+}
+
+func (*disembeddingLayer) Name() string { return "DisembeddingLayer" }
+
+func PositionalEmbeddingLayer(vocabSize, ctxLen, dim int) Layer {
+	pos := NewInputNodeBatch(ctxLen, "P_%d", false)
+	for i, p := range pos {
+		p.SetV(float64(i))
+	}
+	return &positionalEmbeddingLayer{
+		semantic:   EmbeddingLayer(vocabSize, dim),
+		positional: EmbeddingLayer(ctxLen, dim),
+		pos:        pos,
+	}
+}
+
+type positionalEmbeddingLayer struct {
+	semantic   Layer
+	positional Layer
+	pos        []*Node
+}
+
+func (pel *positionalEmbeddingLayer) Feed(in []*Node) (out []*Node) {
+	var (
+		semOut = pel.semantic.Feed(in)
+		posOut = pel.positional.Feed(pel.pos[:len(in)])
+	)
+	for i, so := range semOut {
+		out = append(out, Plus(so, posOut[i]))
+	}
+	return out
+}
+
+func (pel *positionalEmbeddingLayer) Parameters() []util.Parameter {
+	return append(pel.semantic.Parameters(), pel.positional.Parameters()...)
+}
+
+func (*positionalEmbeddingLayer) Name() string { return "PositionalEmbeddingLayer" }

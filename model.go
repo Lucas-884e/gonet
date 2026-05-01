@@ -19,6 +19,15 @@ func EmbeddingModel(vocabSize, dim int) Model {
 	return SequentialModel(EmbeddingLayer(vocabSize, dim))
 }
 
+func DecoderOnlyTransformer(vocabSize, ctxLen, layerNum, headNum, embDim int) Model {
+	layers := []Layer{PositionalEmbeddingLayer(vocabSize, ctxLen, embDim)}
+	for range layerNum {
+		layers = append(layers, AttentionBlockLayer(embDim, headNum, MaskedSelfAttentionLayer))
+	}
+	layers = append(layers, DisembeddingLayer(vocabSize, embDim, true))
+	return SequentialModel(layers...)
+}
+
 func SequentialModel(layers ...Layer) Model {
 	return &sequentialModel{
 		layers: layers,

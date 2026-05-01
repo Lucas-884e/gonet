@@ -233,10 +233,10 @@ func Softmax(t float64, prev ...*Node) []*Node {
 	return outs
 }
 
-func Linear(inputs, weights []*Node, bias *Node) *Node {
+func InnerProd(left, right []*Node, bias *Node) *Node {
 	var prod []*Node
-	for i, w := range weights {
-		prod = append(prod, Multiply(w, inputs[i]))
+	for i, v := range right {
+		prod = append(prod, Multiply(v, left[i]))
 	}
 	if bias != nil {
 		prod = append(prod, bias)

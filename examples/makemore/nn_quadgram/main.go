@@ -47,7 +47,7 @@ func newModel(vocabSize int) *Model {
 
 func (m *Model) PredictNextProbs(in ...int) []float64 {
 	xs := util.NumberSliceConvert[int, float64](in)
-	return util.Softmax(m.m.Predict(xs))
+	return util.Softmax(1, m.m.Predict(xs))
 }
 
 func (m *Model) Embeddings() (embs [][]float64) {

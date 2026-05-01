@@ -79,7 +79,7 @@ func buildProbMatrix(m gonet.Model, vocabSize int) (mat [][]float64) {
 		} else {
 			xs = []float64{float64(idx)}
 		}
-		mat = append(mat, util.Softmax(m.Predict(xs)))
+		mat = append(mat, util.Softmax(1, m.Predict(xs)))
 	}
 	return mat
 }

@@ -50,7 +50,7 @@ func main() {
 		)
 		pnext = func(in ...int) []float64 {
 			xs := util.NumberSliceConvert[int, float64](in)
-			return util.Softmax(model.Predict(xs))
+			return util.Softmax(1, model.Predict(xs))
 		}
 	)
 	for i := range 10 {

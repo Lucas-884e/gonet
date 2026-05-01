@@ -2,7 +2,6 @@ package main
 
 import (
 	"flag"
-	"fmt"
 	"log"
 	"math/rand/v2"
 	"os"
@@ -18,16 +17,16 @@ var (
 )
 
 const (
-	ctxLen   = 2 // context length
-	embDim   = 2 // embedding space dimension
-	headNum  = 1 // number of attention heads
+	ctxLen   = 4 // context length
 	layerNum = 1 // number of attention layers
+	headNum  = 2 // number of attention heads
+	embDim   = 4 // embedding space dimension
 )
 
 func main() {
 	flag.Parse()
 
-	corpus := util.Must1(os.ReadFile(*data))[:10000]
+	corpus := util.Must1(os.ReadFile(*data))[:3000]
 	log.Printf("First 300 characters from corpus (size=%d): \n<|BEGIN|>\n%s\n<|END|>", len(corpus), corpus[:300])
 	c2i := util.GenVocabFromCorpus([][]byte{corpus}, '\n')
 	i2c := util.GetIndexToToken(c2i)
@@ -41,21 +40,17 @@ func main() {
 	trainSet, valSet := inputs[:trainSize], inputs[trainSize:]
 	log.Printf("Training set size=%d, validation set size=%d", trainSize, len(valSet))
 
-	model := gonet.SequentialModel(
-		gonet.EmbeddingLayer(vocabSize, embDim),
-		gonet.AttentionBlockLayer(embDim, headNum, gonet.MaskedSelfAttentionLayer),
-		gonet.DisembeddingLayer(vocabSize, embDim, true),
-	)
+	model := gonet.DecoderOnlyTransformer(vocabSize, ctxLen, layerNum, headNum, embDim)
 	log.Printf("Generate:\n<|BEGIN|>\n%s\n<|END|>", generate(model, c2i, i2c, 100))
 
 	cfg := util.TrainConfig{
 		BatchSize:        20,
 		Epochs:           50,
-		LearningRate:     0.01,
+		LearningRate:     0.001,
 		LogEpochInterval: 10,
 	}
 	util.InteractiveTrain(&cfg, *interactive, func() time.Duration {
-		samples := randSamples(trainSet, ctxLen, 10000)
+		samples := randSamples(trainSet, ctxLen, 600)
 		return gonet.Train(model, samples, &cfg, gonet.CrossEntropyLoss)
 	})
 
@@ -77,7 +72,7 @@ func generate(model gonet.Model, c2i map[byte]int, i2c []byte, maxGenTokens int,
 		}
 		var (
 			logits = model.Predict(ctxIdx)
-			probs  = util.Softmax(logits[len(logits)-len(i2c):])
+			probs  = util.Softmax(1, logits[len(logits)-len(i2c):])
 			idx    = util.RandMultinomial(probs)
 		)
 		genIdx = append(genIdx, idx)
@@ -96,12 +91,4 @@ func randSamples(dataset []int, ctxLen, count int) (samples []util.Sample) {
 		})
 	}
 	return
-}
-
-func sampleString(s util.Sample, i2c []byte) string {
-	var (
-		x = util.IndexesToTokens(util.NumberSliceConvert[float64, int](s.X), i2c)
-		y = util.IndexesToTokens(util.NumberSliceConvert[float64, int](s.Y), i2c)
-	)
-	return fmt.Sprintf("%+v | %q → %q", s, x, y)
 }
