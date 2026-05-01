@@ -172,8 +172,11 @@ type attentionBlockLayer struct {
 }
 
 func (abl *attentionBlockLayer) Feed(in []*Node) (out []*Node) {
-	values := abl.attention.Feed(in)
-	return abl.ffwd.Feed(values)
+	var (
+		values = abl.attention.Feed(in)
+		ffwdIn = VectorAdd(in, values)
+	)
+	return VectorAdd(ffwdIn, abl.ffwd.Feed(ffwdIn))
 }
 
 func (abl *attentionBlockLayer) Parameters() []util.Parameter {

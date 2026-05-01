@@ -243,3 +243,10 @@ func InnerProd(left, right []*Node, bias *Node) *Node {
 	}
 	return Plus(prod...)
 }
+
+func VectorAdd(left, right []*Node) (out []*Node) {
+	for i, elem := range right {
+		out = append(out, Plus(left[i], elem))
+	}
+	return out
+}

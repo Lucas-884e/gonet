@@ -188,15 +188,12 @@ type positionalEmbeddingLayer struct {
 	pos        []*Node
 }
 
-func (pel *positionalEmbeddingLayer) Feed(in []*Node) (out []*Node) {
+func (pel *positionalEmbeddingLayer) Feed(in []*Node) []*Node {
 	var (
 		semOut = pel.semantic.Feed(in)
 		posOut = pel.positional.Feed(pel.pos[:len(in)])
 	)
-	for i, so := range semOut {
-		out = append(out, Plus(so, posOut[i]))
-	}
-	return out
+	return VectorAdd(semOut, posOut)
 }
 
 func (pel *positionalEmbeddingLayer) Parameters() []util.Parameter {
