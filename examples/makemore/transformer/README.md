@@ -10,18 +10,22 @@ The Transformer model is built in a hierarchical manner.
 
 ### Masked Self-Attention
 
+Take embedding dimension = 2 and key/value/query vector dimension = 2 as an example:
 ![Masked Self-Attention Illustration](/assets/masked-self-attention-illustration.png)
 
 ### Multi-Head Attention
 
+Take embedding dimension = 32 and head number = 2 as an example:
 ![Multi-Head Attention Illustration](/assets/multi-head-attention-illustration.png)
 
 ### Attention Block
 
+Take embedding dimension = 96 and head number = 3 as an example:
 ![Attention Block Architecture](/assets/attention-block-architecture.png)
 
 ### Transformer
 
+Take embedding dimension = 96 and attention block layers = 3 as an example:
 ![Transformer Architecture](/assets/transformer-architecture.png)
 
 ## Performance
