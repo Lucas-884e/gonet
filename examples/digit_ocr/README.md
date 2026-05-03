@@ -34,3 +34,7 @@
   ```
   go run . --arr
   ```
+
+## Model Illustration
+
+![Digit OCR Model](/assets/digit-ocr-model.png)
