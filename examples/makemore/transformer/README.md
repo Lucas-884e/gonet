@@ -4,6 +4,19 @@ This example tries to train the same character-based GPT language model as in th
 [Let's build GPT: from scratch, in code, spelled out](https://www.youtube.com/watch?v=kCc8FmEb1nY&list=PLAqhIrjkxbuWI23v9cThsA9GvCAUhRvKZ&index=8)
 video of the "Neural Networks: Zero to Hero" series taught by Andrej Karpathy.
 
+## How to train?
+
+```
+go run .
+```
+
+Add `--interactive` for interactive training so that you can change learning rate
+and training epochs dynamically:
+
+```
+go run . --interactive
+```
+
 ## Model structure
 
 The Transformer model is built in a hierarchical manner.

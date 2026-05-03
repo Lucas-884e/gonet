@@ -44,7 +44,7 @@ The library has two completely separate neural network implementations that shar
 
 1. **Root package (`gonet`)** — Computational graph with autograd. Each `Node` carries closure-based `forward` and `backward` functions. Calling `node.Backward()` performs topological sort then reverse-order gradient propagation through the graph. The `MLP` type builds a graph of nodes when `Feed()` is called, and `Learn()` updates all weight nodes.
 
-2. **`arrimpl` package** — Array-based FCNNet. Neurons store weights as `[]Weight` structs with explicit indices. Forward/backward propagation is done via manual matrix-style loops across layers. The `Trainer` type handles the training loop with epoch/batch iteration.
+2. **`arrimpl` package** — Array-based MLP. Neurons store weights as `[]Weight` structs with explicit indices. Forward/backward propagation is done via manual matrix-style loops across layers. The `Trainer` type handles the training loop with epoch/batch iteration.
 
 ### Key Design Details
 
