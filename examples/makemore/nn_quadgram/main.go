@@ -18,8 +18,8 @@ var (
 
 const (
 	ctxLen  = 3  // context length
-	embDim  = 2  // embedding space dimension
-	hidSize = 10 // hidden layer size
+	embDim  = 10 // embedding space dimension
+	hidSize = 36 // hidden layer size
 )
 
 type Model struct {
@@ -82,9 +82,9 @@ func main() {
 
 	cfg := util.TrainConfig{
 		BatchSize:        32,
-		Epochs:           100,
-		LearningRate:     0.003,
-		LogEpochInterval: 20,
+		Epochs:           10,
+		LearningRate:     0.001,
+		LogEpochInterval: 10,
 	}
 	util.InteractiveTrain(&cfg, *interactive, func() time.Duration {
 		return gonet.Train(model.m, samples, &cfg, gonet.CrossEntropyLoss)

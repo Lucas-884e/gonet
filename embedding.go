@@ -2,7 +2,6 @@ package gonet
 
 import (
 	"fmt"
-	"math"
 	"math/rand/v2"
 	"strings"
 
@@ -10,13 +9,10 @@ import (
 )
 
 func NewEmbedding(vocabSize, dim int) *Embedding {
-	var (
-		mat        = make([]*Node, vocabSize*dim)
-		normFactor = math.Sqrt(float64(dim))
-	)
+	mat := make([]*Node, vocabSize*dim)
 	for i := range vocabSize {
 		for j := range dim {
-			v := rand.NormFloat64() / normFactor
+			v := rand.NormFloat64()
 			mat[i*dim+j] = NewNode(v, fmt.Sprintf("E_%d_%d", j, i))
 		}
 	}

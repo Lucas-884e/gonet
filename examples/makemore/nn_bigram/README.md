@@ -40,6 +40,37 @@ Two types of implementations:
 
 ![Embedding Model](/assets/bigram-embedding-model.png)
 
+## Name Generation
+
+After training, we reached a Cross Entropy Loss around 2.454, which is basically
+at the same level as word-counting based bigram model. And the model can generate
+names like the following ones:
+
+```
+qanion
+alyne
+paxorinilele
+lahliaddr
+hynsliyn
+ayahleniriceleshakem
+cosuerooma
+sinn
+lesee
+kheann
+meederela
+kafomah
+b
+ken
+remadipristta
+xiolis
+cava
+mesan
+nnnnnimy
+se
+```
+
+Not very good? Try the [nn_quadgram](/examples/makemore/nn_quadgram/) example.
+
 ## Performance test
 
 On my 2022 MacBook Air with M2 chip and 16GB memory (GPU is not used), the approach

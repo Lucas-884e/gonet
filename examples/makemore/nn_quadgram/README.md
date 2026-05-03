@@ -18,12 +18,43 @@ video of the "Neural Networks: Zero to Hero" series taught by Andrej Karpathy.
   go run . --interactive
   ```
 
-## Model structure
+## Model Structure
 
 ![Neural Net Language Model](/assets/bengio-nnlm.png)
 
+## Name Generation
+
+After training, we reached a Cross Entropy Loss around 2.17 on the training set
+(10-dim embedding, 36-dim hidden layer size, 2385 parameters), which is far
+better than the bigram model. And the model can generate better-looking names:
+
+```
+brectuvin
+jay
+jaerison
+nise
+abellianezyn
+tan
+shed
+sheng
+maleah
+orean
+rielina
+hionnole
+gree
+brexrel
+sen
+callisan
+naikyand
+tabel
+kyan
+sayeorenoca
+```
+
 ## Character embedding (2D) distribution
 
+By setting embedding dimension to 2, we can obtain the following 2-dimensional
+character embedding distribution:
 ![Character Embedding Distribution](/assets/character-embedding-distribution.png)
 
 It is quite obvious that the vocabulary (the set of all characters) can be divided
