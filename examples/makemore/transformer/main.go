@@ -17,10 +17,10 @@ var (
 )
 
 const (
-	ctxLen   = 8  // context length
+	ctxLen   = 12 // context length
 	layerNum = 3  // number of attention layers
-	headNum  = 4  // number of attention heads
-	embDim   = 64 // embedding space dimension
+	headNum  = 6  // number of attention heads
+	embDim   = 96 // embedding space dimension
 
 	learningRate    = 0.001
 	samplesPerEpoch = 10000
@@ -29,7 +29,7 @@ const (
 func main() {
 	flag.Parse()
 
-	corpus := util.Must1(os.ReadFile(*data))[:100000]
+	corpus := util.Must1(os.ReadFile(*data))[:200000]
 	log.Printf("First 300 characters from corpus (size=%d): \n<|BEGIN|>\n%s\n<|END|>", len(corpus), corpus[:300])
 	c2i := util.GenVocabFromCorpus([][]byte{corpus}, '\n')
 	i2c := util.GetIndexToToken(c2i)
@@ -48,7 +48,7 @@ func main() {
 
 	cfg := util.TrainConfig{
 		BatchSize:        20,
-		Epochs:           20,
+		Epochs:           1,
 		LearningRate:     learningRate,
 		LogEpochInterval: 10,
 	}

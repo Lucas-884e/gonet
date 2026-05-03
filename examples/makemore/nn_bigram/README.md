@@ -15,14 +15,14 @@ video of the "Neural Networks: Zero to Hero" series taught by Andrej Karpathy.
 - Interactive mode (dynamic learning rate and training epochs setting)
 
   ```
-  go run . --interactiv
+  go run . --interactive
   ```
 
 - Use Linear layer (with one-hot encoding as input) instead of Embedding layer
   (with token index as input) for comparison.
 
   ```
-  go run . --linear --interactiv
+  go run . --linear --interactive
   ```
 
 ## Model structure

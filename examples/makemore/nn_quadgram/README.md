@@ -15,7 +15,7 @@ video of the "Neural Networks: Zero to Hero" series taught by Andrej Karpathy.
 - Interactive mode (dynamic learning rate and training epochs setting)
 
   ```
-  go run . --interactiv
+  go run . --interactive
   ```
 
 ## Model structure
