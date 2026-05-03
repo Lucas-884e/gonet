@@ -4,6 +4,27 @@ This example tries to train the same neural-net based bigram model as in the
 [The spelled-out intro to language modeling: building makemore](https://www.youtube.com/watch?v=PaCmpygFfXo&list=PLAqhIrjkxbuWI23v9cThsA9GvCAUhRvKZ&index=3)
 video of the "Neural Networks: Zero to Hero" series taught by Andrej Karpathy.
 
+## How to train?
+
+- Non-interactive mode
+
+  ```
+  go run .
+  ```
+
+- Interactive mode (dynamic learning rate and training epochs setting)
+
+  ```
+  go run . --interactiv
+  ```
+
+- Use Linear layer (with one-hot encoding as input) instead of Embedding layer
+  (with token index as input) for comparison.
+
+  ```
+  go run . --linear --interactiv
+  ```
+
 ## Model structure
 
 Two types of implementations:
@@ -19,27 +40,6 @@ Two types of implementations:
 
 ![Embedding Model](/assets/bigram-embedding-model.png)
 
-## How to run
-
-- Non-interactive mode
-
-  ```
-  go run .
-  ```
-
-- Interactive mode
-
-  ```
-  go run . --interactiv
-  ```
-
-- Use Linear layer (with one-hot encoding as input) instead of Embedding layer
-  (with token index as input) for comparison.
-
-  ```
-  go run . --linear --interactiv
-  ```
-
 ## Performance test
 
 On my 2022 MacBook Air with M2 chip and 16GB memory (GPU is not used), the approach
@@ -51,4 +51,4 @@ as network input.
 | Approach | Memory | Time cost per epoch | Mini-batch size |
 | -------- | -------- | -------- | -------- |
 | Embedding | 50MB | 0.2 sec | 1000 |
-| Linear | 600MB | 10 sec | 1000 |
+| Linear | 110MB | 0.8 sec | 1000 |
