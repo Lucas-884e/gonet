@@ -6,6 +6,24 @@ video of the "Neural Networks: Zero to Hero" series taught by Andrej Karpathy.
 
 ## Model structure
 
+The Transformer model is built in a hierarchical manner.
+
+### Masked Self-Attention
+
+![Masked Self-Attention Illustration](/assets/masked-self-attention-illustration.png)
+
+### Multi-Head Attention
+
+![Multi-Head Attention Illustration](/assets/multi-head-attention-illustration.png)
+
+### Attention Block
+
+![Attention Block Architecture](/assets/attention-block-architecture.png)
+
+### Transformer
+
+![Transformer Architecture](/assets/transformer-architecture.png)
+
 ## Performance
 
 The following shows the model performance of generating 200 characters out of nothing:
@@ -26,4 +44,4 @@ with following settings:
 
 | Context length | Attention layers | Attention heads | Embedding dimension |
 | -------------- | ---------------- | --------------- | ------------------- |
-| 8 | 3 | 3 | 64 |
+| 8 | 3 | 4 | 64 |
