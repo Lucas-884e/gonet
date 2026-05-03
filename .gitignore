@@ -1,6 +1,8 @@
 examples/digit_ocr/data/sklearn/*.csv
 examples/digit_ocr/data/mnist/*.csv
+examples/pytorch/
 
+AGENTS.md
 
 # Binaries for programs and plugins
 *.exe
