@@ -39,5 +39,5 @@ Embeddings: -------------------
 (Godzilla - Ironman) = [0.0000 0.0000] | [-0.0049 -0.0000]
 ```
 
-One can see that after training, word "Godzilla" and word "Ironman" reaches almost
-the same embedding vector (their difference approaches zero).
+One can see that after training, word "Godzilla" and word "Ironman" reach almost
+the same embedding vector (with their difference approaching zero).
