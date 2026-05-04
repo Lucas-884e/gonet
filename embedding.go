@@ -5,7 +5,7 @@ import (
 	"math/rand/v2"
 	"strings"
 
-	"github.com/Lucas-884e/gonet/util"
+	"github.com/LucasInOz/gonet/util"
 )
 
 func NewEmbedding(vocabSize, dim int) *Embedding {

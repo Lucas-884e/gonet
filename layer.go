@@ -5,7 +5,7 @@ import (
 	"math"
 	"math/rand/v2"
 
-	"github.com/Lucas-884e/gonet/util"
+	"github.com/LucasInOz/gonet/util"
 )
 
 type Layer interface {

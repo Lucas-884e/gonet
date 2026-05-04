@@ -7,8 +7,8 @@ import (
 	"os"
 	"time"
 
-	"github.com/Lucas-884e/gonet"
-	"github.com/Lucas-884e/gonet/util"
+	"github.com/LucasInOz/gonet"
+	"github.com/LucasInOz/gonet/util"
 )
 
 var (

@@ -3,9 +3,9 @@ package main
 import (
 	"log"
 
-	"github.com/Lucas-884e/gonet"
-	"github.com/Lucas-884e/gonet/arrimpl"
-	"github.com/Lucas-884e/gonet/util"
+	"github.com/LucasInOz/gonet"
+	"github.com/LucasInOz/gonet/arrimpl"
+	"github.com/LucasInOz/gonet/util"
 )
 
 func constructNonGraphNetwork(hiddenLayerSizes ...int) *arrimpl.MLP {

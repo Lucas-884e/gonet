@@ -6,7 +6,7 @@ import (
 	"log"
 	"time"
 
-	"github.com/Lucas-884e/gonet/util"
+	"github.com/LucasInOz/gonet/util"
 )
 
 func Train(model Model, samples []util.Sample, cfg *util.TrainConfig, lf LossFunction) time.Duration {

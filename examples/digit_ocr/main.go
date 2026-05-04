@@ -7,7 +7,7 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/Lucas-884e/gonet/util"
+	"github.com/LucasInOz/gonet/util"
 )
 
 var (

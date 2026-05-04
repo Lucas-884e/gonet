@@ -5,7 +5,7 @@ package arrimpl
 import (
 	"math"
 
-	"github.com/Lucas-884e/gonet/util"
+	"github.com/LucasInOz/gonet/util"
 )
 
 func GenerateRandomLayerWeights(numNeurons, weightsPerNeuron int) [][]float64 {

@@ -6,9 +6,9 @@ import (
 	"log"
 	"time"
 
-	"github.com/Lucas-884e/gonet"
-	"github.com/Lucas-884e/gonet/examples/makemore"
-	"github.com/Lucas-884e/gonet/util"
+	"github.com/LucasInOz/gonet"
+	"github.com/LucasInOz/gonet/examples/makemore"
+	"github.com/LucasInOz/gonet/util"
 )
 
 var (
@@ -19,7 +19,7 @@ var (
 const (
 	ctxLen  = 4  // context length
 	embDim  = 10 // embedding space dimension
-	hidSize = 32 // hidden layer size
+	hidSize = 24 // hidden layer size
 )
 
 func main() {
@@ -61,7 +61,7 @@ func main() {
 	cfg := util.TrainConfig{
 		BatchSize:        32,
 		Epochs:           10,
-		LearningRate:     0.003,
+		LearningRate:     0.001,
 		LogEpochInterval: 10,
 	}
 	util.InteractiveTrain(&cfg, *interactive, func() time.Duration {

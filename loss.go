@@ -6,7 +6,7 @@ import (
 	"math"
 	"slices"
 
-	"github.com/Lucas-884e/gonet/util"
+	"github.com/LucasInOz/gonet/util"
 )
 
 type (

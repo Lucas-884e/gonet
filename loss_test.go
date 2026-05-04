@@ -3,7 +3,7 @@ package gonet
 import (
 	"testing"
 
-	"github.com/Lucas-884e/gonet/util"
+	"github.com/LucasInOz/gonet/util"
 	"github.com/stretchr/testify/assert"
 )
 

@@ -7,7 +7,7 @@ import (
 	"os"
 	"strings"
 
-	"github.com/Lucas-884e/gonet/util"
+	"github.com/LucasInOz/gonet/util"
 )
 
 func ReadInCorpus(path string) (corpus [][]byte) {

@@ -3,7 +3,7 @@ package arrimpl
 import (
 	"log"
 
-	"github.com/Lucas-884e/gonet/util"
+	"github.com/LucasInOz/gonet/util"
 )
 
 func NewTrainer(model *MLP, isCorrect util.IsCorrectFunc) *Trainer {

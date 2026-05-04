@@ -1,4 +1,4 @@
-module github.com/Lucas-884e/gonet
+module github.com/LucasInOz/gonet
 
 go 1.25.6
 

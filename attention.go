@@ -3,7 +3,7 @@ package gonet
 import (
 	"math"
 
-	"github.com/Lucas-884e/gonet/util"
+	"github.com/LucasInOz/gonet/util"
 )
 
 func KQVLayer(embDim, headSize int) Layer {

@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"math"
 
-	"github.com/Lucas-884e/gonet/util"
+	"github.com/LucasInOz/gonet/util"
 )
 
 type MLP struct {
