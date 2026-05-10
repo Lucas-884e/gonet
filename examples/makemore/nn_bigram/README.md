@@ -46,7 +46,7 @@ After training, we reached a Cross Entropy Loss around 2.454, which is basically
 at the same level as word-counting based bigram model. And the model can generate
 names like the following ones:
 
-```
+```plain/text
 qanion
 alyne
 paxorinilele
@@ -69,7 +69,7 @@ nnnnnimy
 se
 ```
 
-Not very good? Try the [nn_quadgram](/examples/makemore/nn_quadgram/) example.
+Not very good? Try the [nn_quadgram example](/examples/makemore/nn_quadgram/).
 
 ## Performance test
 

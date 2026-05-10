@@ -29,7 +29,7 @@ func (l *kqvLayer) Feed(in []*Node) (out []*Node) {
 		qs = l.query.Feed(in)
 		vs = l.value.Feed(in)
 	)
-	return append(append(ks, qs...), vs...)
+	return append(append(append(out, ks...), qs...), vs...)
 }
 
 func (l *kqvLayer) Parameters() []util.Parameter {

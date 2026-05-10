@@ -30,12 +30,12 @@ type Model struct {
 }
 
 func newModel(vocabSize int) *Model {
-	emb := gonet.NewEmbedding(vocabSize, embDim)
+	emb := gonet.NewEmbedding(vocabSize, embDim, false)
 	m := gonet.SequentialModel(
 		gonet.EmbeddingLayerFrom(emb),
 		gonet.LinearLayer(embDim*ctxLen, hidSize, true),
 		gonet.TanhLayer(),
-		gonet.UnembeddingLayer(vocabSize, hidSize, true),
+		gonet.UnembeddingLayer(hidSize, vocabSize, true),
 	)
 
 	return &Model{
@@ -73,6 +73,7 @@ func main() {
 
 	inputs, labels := util.GenInputsAndLabelsFromCorpus(corpus, c2i, ctxLen)
 	samples := util.GenDatasetFromInputsAndLabels(inputs, labels)
+	log.Printf("Training sample count=%d", len(samples))
 
 	model := newModel(vocabSize)
 	for i := range 20 {
@@ -83,6 +84,7 @@ func main() {
 	cfg := util.TrainConfig{
 		BatchSize:        32,
 		Epochs:           10,
+		Optimizer:        "adam",
 		LearningRate:     0.001,
 		LogEpochInterval: 10,
 	}

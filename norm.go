@@ -40,7 +40,7 @@ func MeanVariance(xs ...*Node) (mean, variance *Node) {
 
 	variance = &Node{
 		name: "variance",
-		prev: append(xs, mean),
+		prev: append([]*Node{mean}, xs...),
 	}
 	variance.forward = func() {
 		variance.v = 0

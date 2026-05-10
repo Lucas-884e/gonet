@@ -14,6 +14,7 @@ type TrainConfig struct {
 	BatchSize        int
 	Epochs           int
 	StopEps          float64
+	Optimizer        string
 	LearningRate     float64
 	LogEpochInterval int
 }

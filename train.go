@@ -13,12 +13,20 @@ func Train(model Model, samples []util.Sample, cfg *util.TrainConfig, lf LossFun
 	var (
 		logInterval = cmp.Or(cfg.LogEpochInterval, 10)
 		params      = model.Parameters()
-		optimizer   = util.DefaultAdamOptimizer(params, cfg.LearningRate)
 		totalLossFn = PredictLossFunc(model, lf)
 		lossFn      = TrainLossFunc(model, lf)
 		loss        *Node
+		optimizer   util.Optimizer
 		delta       float64
 	)
+	switch cfg.Optimizer {
+	case "sgd":
+		optimizer = util.SGDOptimizer(params, cfg.LearningRate)
+	case "adam":
+		fallthrough
+	default:
+		optimizer = util.DefaultAdamOptimizer(params, cfg.LearningRate)
+	}
 	fmt.Println("Number of parameters:", len(params))
 
 	// Evaluation before training.

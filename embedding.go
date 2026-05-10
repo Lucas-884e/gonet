@@ -2,17 +2,24 @@ package gonet
 
 import (
 	"fmt"
+	"math"
 	"math/rand/v2"
 	"strings"
 
 	"github.com/LucasInOz/gonet/util"
 )
 
-func NewEmbedding(vocabSize, dim int) *Embedding {
-	mat := make([]*Node, vocabSize*dim)
+func NewEmbedding(vocabSize, dim int, initNorm bool) *Embedding {
+	var (
+		mat     = make([]*Node, vocabSize*dim)
+		divisor = 1.0
+	)
+	if initNorm {
+		divisor = math.Sqrt(float64(dim))
+	}
 	for i := range vocabSize {
 		for j := range dim {
-			v := rand.NormFloat64()
+			v := rand.NormFloat64() / divisor
 			mat[i*dim+j] = NewNode(v, fmt.Sprintf("E_%d_%d", j, i))
 		}
 	}
@@ -65,20 +72,16 @@ func (e *Embedding) EmbeddingFeed(in []*Node) (out []*Node) {
 
 func (e *Embedding) UnembeddingFeed(in, bias []*Node) (out []*Node) {
 	if len(in) != e.dim {
-		panic(fmt.Sprintf("Feed input size %d does not match embedding dimension %d", len(in), e.dim))
+		panic(fmt.Sprintf("Feed input size %d does not match unembedding dimension %d", len(in), e.dim))
 	}
 
-	withBias := len(bias) > 0
 	for i := range e.vocabSize {
-		// Preserve one slot capacity for bias node, if any.
-		prod := make([]*Node, e.dim, e.dim+1)
-		for j, x := range in {
-			prod[j] = Multiply(e.matrix[i*e.dim+j], x)
+		weights := e.matrix[i*e.dim : (i+1)*e.dim]
+		if len(bias) > 0 {
+			out = append(out, Linear(weights, in, bias[i]))
+		} else {
+			out = append(out, Linear(weights, in, nil))
 		}
-		if withBias {
-			prod = append(prod, bias[i])
-		}
-		out = append(out, Plus(prod...))
 	}
 	return out
 }
@@ -107,7 +110,7 @@ func (e *Embedding) S(index int) string {
 }
 
 func EmbeddingLayer(vocabSize, dim int) Layer {
-	emb := NewEmbedding(vocabSize, dim)
+	emb := NewEmbedding(vocabSize, dim, false)
 	return EmbeddingLayerFrom(emb)
 }
 
@@ -127,20 +130,20 @@ func (el *embeddingLayer) Parameters() []util.Parameter {
 
 func (*embeddingLayer) Name() string { return "EmbeddingLayer" }
 
-func UnembeddingLayer(vocabSize, dim int, bias bool) Layer {
-	emb := NewEmbedding(vocabSize, dim)
+func UnembeddingLayer(dim, vocabSize int, bias bool) Layer {
+	emb := NewEmbedding(vocabSize, dim, true)
 	return UnembeddingLayerFrom(emb, bias)
 }
 
 func UnembeddingLayerFrom(emb *Embedding, bias bool) Layer {
-	dl := &unembeddingLayer{Embedding: emb}
+	ul := &unembeddingLayer{Embedding: emb}
 	if bias {
-		dl.bias = make([]*Node, emb.vocabSize)
+		ul.bias = make([]*Node, emb.vocabSize)
 		for i := range emb.vocabSize {
-			dl.bias[i] = NewNode(0, fmt.Sprintf("B_%d", i))
+			ul.bias[i] = NewNode(0, fmt.Sprintf("B_%d", i))
 		}
 	}
-	return dl
+	return ul
 }
 
 type unembeddingLayer struct {
@@ -148,20 +151,20 @@ type unembeddingLayer struct {
 	bias []*Node
 }
 
-func (dl *unembeddingLayer) Feed(in []*Node) (out []*Node) {
-	if len(in)%dl.dim != 0 {
+func (ul *unembeddingLayer) Feed(in []*Node) (out []*Node) {
+	if len(in)%ul.dim != 0 {
 		panic("input size is not a multiple of unembedding.dim")
 	}
 
-	for i := 0; i < len(in); i += dl.dim {
-		out = append(out, dl.UnembeddingFeed(in[i:i+dl.dim], dl.bias)...)
+	for i := 0; i < len(in); i += ul.dim {
+		out = append(out, ul.UnembeddingFeed(in[i:i+ul.dim], ul.bias)...)
 	}
 	return out
 }
 
-func (dl *unembeddingLayer) Parameters() []util.Parameter {
-	emb := util.SliceConvert[*Node, util.Parameter](dl.matrix)
-	return append(emb, util.SliceConvert[*Node, util.Parameter](dl.bias)...)
+func (ul *unembeddingLayer) Parameters() []util.Parameter {
+	emb := util.SliceConvert[*Node, util.Parameter](ul.matrix)
+	return append(emb, util.SliceConvert[*Node, util.Parameter](ul.bias)...)
 }
 
 func (*unembeddingLayer) Name() string { return "unembeddingLayer" }

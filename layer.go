@@ -40,7 +40,7 @@ type singleLinear struct {
 }
 
 func (sl *singleLinear) Feed(in []*Node) []*Node {
-	return []*Node{Linear(in, sl.weights, sl.bias)}
+	return []*Node{Linear(sl.weights, in, sl.bias)}
 }
 
 func (sl *singleLinear) Parameters() []util.Parameter {

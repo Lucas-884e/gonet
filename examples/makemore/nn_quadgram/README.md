@@ -28,28 +28,31 @@ After training, we reached a Cross Entropy Loss around 2.17 on the training set
 (10-dim embedding, 36-dim hidden layer size, 2385 parameters), which is far
 better than the bigram model. And the model can generate better-looking names:
 
+```plain/text
+toyt
+tai
+maka
+amellaw
+kamien
+abel
+amison
+pelian
+reig
+kias
+adee
+neadmi
+elm
+dari
+ailgion
+quidalygandra
+navianee
+jelts
+khani
+diz
 ```
-brectuvin
-jay
-jaerison
-nise
-abellianezyn
-tan
-shed
-sheng
-maleah
-orean
-rielina
-hionnole
-gree
-brexrel
-sen
-callisan
-naikyand
-tabel
-kyan
-sayeorenoca
-```
+
+Still feeling missing some quintessence of the ingredients in English names?
+Try the [WaveNet example](/examples/makemore/wavenet/).
 
 ## Character embedding (2D) distribution
 

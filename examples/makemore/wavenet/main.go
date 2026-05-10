@@ -37,6 +37,7 @@ func main() {
 
 	inputs, labels := util.GenInputsAndLabelsFromCorpus(corpus, c2i, ctxLen)
 	samples := util.GenDatasetFromInputsAndLabels(inputs, labels)
+	log.Printf("Training sample count=%d with a few examples:", len(samples))
 	printSamples(samples[:10], i2c)
 
 	var (
@@ -46,7 +47,7 @@ func main() {
 			gonet.TanhLayer(),
 			gonet.LinearLayer(hidSize*2, hidSize, false),
 			gonet.TanhLayer(),
-			gonet.UnembeddingLayer(vocabSize, hidSize, true),
+			gonet.UnembeddingLayer(hidSize, vocabSize, true),
 		)
 		pnext = func(in ...int) []float64 {
 			xs := util.NumberSliceConvert[int, float64](in)
@@ -68,7 +69,7 @@ func main() {
 		return gonet.Train(model, samples, &cfg, gonet.CrossEntropyLoss)
 	})
 
-	for i := range 10 {
+	for i := range 20 {
 		name := makemore.GenName(i2c, pnext, ctxLen)
 		fmt.Printf("[After training] Generate name (%d | len=%d): %s\n", i+1, len(name), name)
 	}

@@ -219,7 +219,7 @@ func Linear(ws, xs []*Node, bias *Node) *Node {
 		noGrad = cmp.Or(ws[0].noGrad, xs[0].noGrad)
 		out    = &Node{
 			name:   "linear",
-			prev:   append(ws, xs...),
+			prev:   append(append([]*Node{}, ws...), xs...),
 			noGrad: noGrad,
 		}
 	)

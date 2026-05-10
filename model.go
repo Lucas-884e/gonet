@@ -25,7 +25,7 @@ func DecoderOnlyTransformer(vocabSize, ctxLen, layerNum, headNum, embDim int) Mo
 		layers = append(layers, AttentionBlockLayer(embDim, headNum, MaskedSelfAttentionLayer))
 	}
 	layers = append(layers, LayerNormLayer(embDim))
-	layers = append(layers, UnembeddingLayer(vocabSize, embDim, true))
+	layers = append(layers, UnembeddingLayer(embDim, vocabSize, true))
 	return SequentialModel(layers...)
 }
 
