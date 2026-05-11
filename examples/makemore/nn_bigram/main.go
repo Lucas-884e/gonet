@@ -61,7 +61,7 @@ func main() {
 	}
 	util.InteractiveTrain(&cfg, *interactive, func() time.Duration {
 		return gonet.Train(model, samples, &cfg, gonet.CrossEntropyLoss)
-	})
+	}, nil)
 
 	pmat = buildProbMatrix(model, vocabSize)
 	fmt.Printf("[After training] Probability matrix: %s\n", makemore.FormatEmbeddings(pmat, " "))

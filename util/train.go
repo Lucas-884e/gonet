@@ -35,21 +35,21 @@ func PredictionPrecision(p Predictor, testSet []Sample, isCorrect IsCorrectFunc)
 	return float32(correctCount) / float32(len(testSet))
 }
 
-func InteractiveTrain(cfg *TrainConfig, interactive bool, train func() time.Duration) {
-	reader := bufio.NewReader(os.Stdin)
+func InteractiveTrain(cfg *TrainConfig, interactive bool, train func() time.Duration, predict func()) {
+	fmt.Printf("Mini-batch size: %d\nTraining epochs: %d\nLearning rate: %g\n", cfg.BatchSize, cfg.Epochs, cfg.LearningRate)
+	trainTimeCost := train()
+	log.Printf("Training time cost: %s", trainTimeCost)
+
+	if !interactive {
+		return
+	}
 
 training:
-	for {
-		fmt.Printf("Mini-batch size: %d\nTraining epochs: %d\nLearning rate: %g\n", cfg.BatchSize, cfg.Epochs, cfg.LearningRate)
-		trainTimeCost := train()
-		log.Printf("Training time cost: %s", trainTimeCost)
-
-		if !interactive {
-			break
-		}
+	for reader := bufio.NewReader(os.Stdin); ; {
 
 		fmt.Println("Continue training?")
 		fmt.Println("  (q, quit, exit) exit;")
+		fmt.Println("  (p, pred, predict) do prediction;")
 		fmt.Println("  (integer float) training epochs -> integer, learning_rate -> float;")
 		fmt.Println("  (otherwise) continue.")
 		cmd, err := reader.ReadString('\n')
@@ -60,6 +60,12 @@ training:
 		switch cmd = strings.TrimSpace(cmd); cmd {
 		case "q", "quit", "exit":
 			break training
+
+		case "p", "pred", "predict":
+			if predict != nil {
+				predict()
+			}
+
 		default:
 			// Input command format:
 			// (Case 1) 200
@@ -77,6 +83,12 @@ training:
 					cfg.LearningRate = lr
 				}
 			}
+
+			fmt.Println("Mini-batch size:", cfg.BatchSize)
+			fmt.Println("Training epochs:", cfg.Epochs)
+			fmt.Println("Learning rate:", cfg.LearningRate)
+			trainTimeCost := train()
+			log.Println("Training time cost:", trainTimeCost)
 		}
 	}
 }

@@ -75,11 +75,18 @@ func main() {
 	samples := util.GenDatasetFromInputsAndLabels(inputs, labels)
 	log.Printf("Training sample count=%d", len(samples))
 
-	model := newModel(vocabSize)
-	for i := range 20 {
-		name := makemore.GenName(i2c, model.PredictNextProbs, ctxLen)
-		fmt.Printf("[Before training] Generate name (%d | len=%d): %s\n", i+1, len(name), name)
-	}
+	var (
+		model   = newModel(vocabSize)
+		predict = func(num int, stage string) func() {
+			return func() {
+				for i := range num {
+					name := makemore.GenName(i2c, model.PredictNextProbs, ctxLen)
+					fmt.Printf("[%s] Generate name (%d | len=%d): %s\n", stage, i+1, len(name), name)
+				}
+			}
+		}
+	)
+	predict(20, "Before training")()
 
 	cfg := util.TrainConfig{
 		BatchSize:        32,
@@ -90,12 +97,9 @@ func main() {
 	}
 	util.InteractiveTrain(&cfg, *interactive, func() time.Duration {
 		return gonet.Train(model.m, samples, &cfg, gonet.CrossEntropyLoss)
-	})
+	}, predict(5, "During training"))
 
 	fmt.Println(makemore.FormatEmbeddings(model.Embeddings(), ", "))
 
-	for i := range 20 {
-		name := makemore.GenName(i2c, model.PredictNextProbs, ctxLen)
-		fmt.Printf("[After training] Generate name (%d | len=%d): %s\n", i+1, len(name), name)
-	}
+	predict(20, "After training")()
 }

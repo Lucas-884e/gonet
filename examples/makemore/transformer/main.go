@@ -22,7 +22,7 @@ const (
 	headNum  = 6  // number of attention heads
 	embDim   = 96 // embedding space dimension
 
-	learningRate    = 0.001
+	learningRate    = 0.0003
 	samplesPerEpoch = 10000
 )
 
@@ -43,8 +43,15 @@ func main() {
 	trainSet, valSet := inputs[:trainSize], inputs[trainSize:]
 	log.Printf("Training set size=%d, validation set size=%d", trainSize, len(valSet))
 
-	model := gonet.DecoderOnlyTransformer(vocabSize, ctxLen, layerNum, headNum, embDim)
-	log.Printf("Generate:\n<|BEGIN|>\n%s\n<|END|>", generate(model, c2i, i2c, 100))
+	var (
+		model   = gonet.DecoderOnlyTransformer(vocabSize, ctxLen, layerNum, headNum, embDim)
+		predict = func(num int) func() {
+			return func() {
+				log.Printf("Generate:\n<|BEGIN|>\n%s\n<|END|>", generate(model, c2i, i2c, num))
+			}
+		}
+	)
+	predict(100)()
 
 	cfg := util.TrainConfig{
 		BatchSize:        20,
@@ -55,9 +62,9 @@ func main() {
 	util.InteractiveTrain(&cfg, *interactive, func() time.Duration {
 		samples := randSamples(trainSet, ctxLen, samplesPerEpoch)
 		return gonet.Train(model, samples, &cfg, gonet.CrossEntropyLoss)
-	})
+	}, predict(50))
 
-	log.Printf("Generate:\n<|BEGIN|>\n%s\n<|END|>", generate(model, c2i, i2c, 200))
+	predict(200)()
 }
 
 func generate(model gonet.Model, c2i map[byte]int, i2c []byte, maxGenTokens int, ctx ...byte) []byte {

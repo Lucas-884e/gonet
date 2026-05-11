@@ -53,11 +53,16 @@ func main() {
 			xs := util.NumberSliceConvert[int, float64](in)
 			return util.Softmax(1, model.Predict(xs))
 		}
+		predict = func(num int, stage string) func() {
+			return func() {
+				for i := range num {
+					name := makemore.GenName(i2c, pnext, ctxLen)
+					fmt.Printf("[%s] Generate name (%d | len=%d): %s\n", stage, i+1, len(name), name)
+				}
+			}
+		}
 	)
-	for i := range 10 {
-		name := makemore.GenName(i2c, pnext, ctxLen)
-		fmt.Printf("[Before training] Generate name (%d | len=%d): %s\n", i+1, len(name), name)
-	}
+	predict(10, "Before training")()
 
 	cfg := util.TrainConfig{
 		BatchSize:        32,
@@ -67,12 +72,9 @@ func main() {
 	}
 	util.InteractiveTrain(&cfg, *interactive, func() time.Duration {
 		return gonet.Train(model, samples, &cfg, gonet.CrossEntropyLoss)
-	})
+	}, predict(5, "During training"))
 
-	for i := range 20 {
-		name := makemore.GenName(i2c, pnext, ctxLen)
-		fmt.Printf("[After training] Generate name (%d | len=%d): %s\n", i+1, len(name), name)
-	}
+	predict(20, "After training")()
 }
 
 func printSamples(samples []util.Sample, i2c []byte) {
