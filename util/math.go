@@ -36,9 +36,9 @@ func Transpose[T any](mat [][]T) [][]T {
 
 func MaskedAttention[T any](ks, qs, vs [][]T, mul func([]T, []T) T, softmax func([]T) []T) (out []T) {
 	// ws is the masked attention weights (a lower-triangular matrix):
-	// [1]
-	// [x, x]  (sum_x = 1)
-	// [y, y, y]  (sum_y = 1)
+	// [1, 0, 0, ...]
+	// [x, x, 0, ...]  (sum_x = 1)
+	// [y, y, y, ...]  (sum_y = 1)
 	// ...
 	ws := [][]T{{}}
 	for i, q := range qs {
@@ -59,7 +59,7 @@ func MaskedAttention[T any](ks, qs, vs [][]T, mul func([]T, []T) T, softmax func
 
 	for i, w := range ws {
 		if i == 0 {
-			continue // Skip first row.
+			continue // Skip first row as vs[0] is already appended to `out`.
 		}
 		for _, v := range vs {
 			// Since ws is lower-triangular matrix, so we only take the first `i+1`

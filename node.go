@@ -2,7 +2,6 @@ package gonet
 
 import (
 	"fmt"
-	"slices"
 	"strings"
 )
 
@@ -53,13 +52,12 @@ type Node struct {
 	noGrad  bool
 	prev    []*Node // previous node
 
-	v            float64 // value of current node, computed with `forward`
-	forward      func()
-	forwardOrder []*Node
+	topoOrder []*Node
+	forward   func()
+	backward  func() // backward propagation function for computing the gradient `g`
 
-	g             float64 // gradient: ∂(next_node)/∂(current_node)
-	backward      func()  // backward propagation function for computing the gradient `g`
-	backwardOrder []*Node
+	v float64 // value of current node, computed with `forward`
+	g float64 // gradient: ∂(next_node)/∂(current_node)
 }
 
 func (n *Node) SetName(name string) {
@@ -91,10 +89,10 @@ func (n *Node) Learn(delta float64) {
 }
 
 func (n *Node) Forward() {
-	// We do breadth-first-search first so that we don't do forward propagation
-	// on the same node more than once.
-	for _, node := range n.bfs() {
-		node.forward()
+	for _, sn := range n.topologicalSort() {
+		if !sn.isLeaf {
+			sn.forward()
+		}
 	}
 }
 
@@ -110,8 +108,10 @@ func (n *Node) Backward() {
 	}
 	n.g = 1
 
-	for _, sn := range sorted {
-		if !sn.isLeaf {
+	// `sorted` is in reverse topological order for backward propagation.
+	// Therefore, we do `sorted[i].backward()` reversely.
+	for i := len(sorted) - 1; i >= 0; i-- {
+		if sn := sorted[i]; !sn.isLeaf {
 			sn.backward()
 		}
 	}
@@ -132,48 +132,12 @@ func (n *Node) String() string {
 	return sb.String()
 }
 
-func (n *Node) bfs() (nodes []*Node) {
-	// We have reused all the graph nodes on every forward and backward propagation,
-	// so we don't need to traversal every time. Otherwise, it will significantly
-	// slow down the training process (by many times).
-	if len(n.forwardOrder) > 0 {
-		return n.forwardOrder
-	}
-
-	var (
-		visited = make(map[*Node]bool)
-		stack   = []*Node{n}
-	)
-	for len(stack) > 0 {
-		pop := stack[0]
-		stack = stack[1:]
-		if !pop.isLeaf {
-			nodes = append(nodes, pop)
-		}
-
-		// Traverse in reverse order so that after `slices.Reverse`, the result
-		// sequence will be in natural order. Otherwise, the forward propagation
-		// of some types (eg, Softmax) of Nodes would fail because they depends on
-		// the first node being forward propagated first.
-		for i := len(pop.prev) - 1; i >= 0; i-- {
-			if p := pop.prev[i]; !visited[p] && !p.isLeaf {
-				visited[p] = true
-				stack = append(stack, p)
-			}
-		}
-	}
-
-	slices.Reverse(nodes)
-	n.forwardOrder = nodes
-	return nodes
-}
-
 func (n *Node) topologicalSort() (sorted []*Node) {
 	// We have reused all the graph nodes on every forward and backward propagation,
 	// so we don't need to sort every time. Otherwise, it will significantly slow
 	// down the training process (by many times).
-	if len(n.backwardOrder) > 0 {
-		return n.backwardOrder
+	if len(n.topoOrder) > 0 {
+		return n.topoOrder
 	}
 
 	var (
@@ -199,10 +163,6 @@ func (n *Node) topologicalSort() (sorted []*Node) {
 	}
 	sort(n)
 
-	// We appended current node after sorting previous nodes, so the `sorted` is
-	// in reverse topological order. Therefore, we do `Reverse` so that we can do
-	// back-propagation in normal order.
-	slices.Reverse(sorted)
-	n.backwardOrder = sorted
+	n.topoOrder = sorted
 	return sorted
 }

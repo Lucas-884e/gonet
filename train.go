@@ -11,13 +11,14 @@ import (
 
 func Train(model Model, samples []util.Sample, cfg *util.TrainConfig, lf LossFunction) time.Duration {
 	var (
-		logInterval = cmp.Or(cfg.LogEpochInterval, 10)
-		params      = model.Parameters()
-		totalLossFn = PredictLossFunc(model, lf)
-		lossFn      = TrainLossFunc(model, lf)
-		loss        *Node
-		optimizer   util.Optimizer
-		delta       float64
+		logInterval  = cmp.Or(cfg.LogEpochInterval, 10)
+		params       = model.Parameters()
+		totalLossFn  = PredictLossFunc(model, lf)
+		lossFn       = TrainLossFunc(model, lf)
+		trainSamples = samples
+		loss         *Node
+		optimizer    util.Optimizer
+		delta        float64
 	)
 	switch cfg.Optimizer {
 	case "sgd":
@@ -35,17 +36,24 @@ func Train(model Model, samples []util.Sample, cfg *util.TrainConfig, lf LossFun
 
 	start := time.Now()
 	for ep := 0; ep < cfg.Epochs; ep++ {
-		util.ShuffleSamples(samples)
-		for start := 0; start < len(samples); start += cfg.BatchSize {
+		// Prepare training samples for this epoch.
+		if cfg.Sampler != nil {
+			trainSamples = cfg.Sampler()
+		}
+		util.ShuffleSamples(trainSamples)
+
+		// Do forward & backward propagation and update parameters.
+		for start := 0; start < len(trainSamples); start += cfg.BatchSize {
 			end := start + cfg.BatchSize
-			if end > len(samples) {
+			if end > len(trainSamples) {
 				break // Ignore samples left that cannot form a mini-batch.
 			}
-			loss = lossFn(samples[start:end])
+			loss = lossFn(trainSamples[start:end])
 			loss.Backward()
 			delta = optimizer.Learn()
 		}
 
+		// Emit some metrics.
 		if ep%logInterval == 0 || ep+1 == cfg.Epochs {
 			log.Printf("[Epoch=%d] Gradient descent delta=%g | loss=%g", ep, delta, loss.V())
 		}

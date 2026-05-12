@@ -5,6 +5,7 @@ import (
 	"log"
 	"math/rand/v2"
 	"os"
+	"strconv"
 	"time"
 
 	"github.com/LucasInOz/gonet"
@@ -22,14 +23,15 @@ const (
 	headNum  = 6  // number of attention heads
 	embDim   = 96 // embedding space dimension
 
-	learningRate    = 0.0003
-	samplesPerEpoch = 10000
+	learningRate    = 0.001
+	samplesPerEpoch = 1000
+	batchSize       = 20
 )
 
 func main() {
 	flag.Parse()
 
-	corpus := util.Must1(os.ReadFile(*data))[:200000]
+	corpus := util.Must1(os.ReadFile(*data))[:5000]
 	log.Printf("First 300 characters from corpus (size=%d): \n<|BEGIN|>\n%s\n<|END|>", len(corpus), corpus[:300])
 	c2i := util.GenVocabFromCorpus([][]byte{corpus}, '\n')
 	i2c := util.GetIndexToToken(c2i)
@@ -45,8 +47,11 @@ func main() {
 
 	var (
 		model   = gonet.DecoderOnlyTransformer(vocabSize, ctxLen, layerNum, headNum, embDim)
-		predict = func(num int) func() {
-			return func() {
+		predict = func(num int) func(...string) {
+			return func(params ...string) {
+				if len(params) > 0 {
+					num, _ = strconv.Atoi(params[0])
+				}
 				log.Printf("Generate:\n<|BEGIN|>\n%s\n<|END|>", generate(model, c2i, i2c, num))
 			}
 		}
@@ -54,10 +59,13 @@ func main() {
 	predict(100)()
 
 	cfg := util.TrainConfig{
-		BatchSize:        20,
-		Epochs:           1,
+		BatchSize:        batchSize,
+		Epochs:           500,
 		LearningRate:     learningRate,
-		LogEpochInterval: 10,
+		LogEpochInterval: 500,
+		Sampler: func() []util.Sample {
+			return randSamples(trainSet, ctxLen, batchSize)
+		},
 	}
 	util.InteractiveTrain(&cfg, *interactive, func() time.Duration {
 		samples := randSamples(trainSet, ctxLen, samplesPerEpoch)

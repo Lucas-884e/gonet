@@ -14,16 +14,20 @@ type Layer interface {
 	Name() string
 }
 
-func SingleLinear(inputSize int, bias bool) *singleLinear {
+func SingleLinear(idx, inputSize int, bias bool, names ...string) *singleLinear {
 	var (
-		sl         = new(singleLinear)
+		sl         = &singleLinear{index: idx}
 		normFactor = math.Sqrt(float64(inputSize))
+		name       = "W_%d"
 	)
+	if len(names) > 0 {
+		name = names[0] + "_%d"
+	}
 
 	for widx := range inputSize {
 		// Initial weights must be normalized, otherwise training won't converge.
 		w := rand.NormFloat64() / normFactor
-		wn := NewNode(w, fmt.Sprintf("W_%d", widx))
+		wn := NewNode(w, fmt.Sprintf(name, widx))
 		sl.weights = append(sl.weights, wn)
 	}
 
@@ -37,10 +41,11 @@ func SingleLinear(inputSize int, bias bool) *singleLinear {
 type singleLinear struct {
 	weights []*Node
 	bias    *Node
+	index   int
 }
 
 func (sl *singleLinear) Feed(in []*Node) []*Node {
-	return []*Node{Linear(sl.weights, in, sl.bias)}
+	return []*Node{Linear(sl.weights, in, sl.bias, fmt.Sprintf("Linear_%d", sl.index))}
 }
 
 func (sl *singleLinear) Parameters() []util.Parameter {
@@ -53,10 +58,16 @@ func (sl *singleLinear) Parameters() []util.Parameter {
 
 func (sl *singleLinear) Name() string { return "SingleLinear" }
 
-func LinearLayer(fanIn, fanOut int, bias bool) Layer {
-	ll := &linearLayer{fanIn: fanIn}
-	for range fanOut {
-		ll.neurons = append(ll.neurons, SingleLinear(fanIn, bias))
+func LinearLayer(fanIn, fanOut int, bias bool, names ...string) Layer {
+	var (
+		ll   = &linearLayer{fanIn: fanIn}
+		name = "W_%d"
+	)
+	if len(names) > 0 {
+		name = names[0] + "_%d"
+	}
+	for i := range fanOut {
+		ll.neurons = append(ll.neurons, SingleLinear(i, fanIn, bias, fmt.Sprintf(name, i)))
 	}
 	return ll
 }

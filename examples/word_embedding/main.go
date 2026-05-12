@@ -47,7 +47,7 @@ func main() {
 
 func trainEmbeddings(samples []util.Sample, vocabSize, dim int) (emb, unemb *gonet.Embedding) {
 	emb = gonet.NewEmbedding(vocabSize, dim, false)
-	unemb = gonet.NewEmbedding(vocabSize, dim, true)
+	unemb = gonet.NewEmbedding(vocabSize, dim, true, "Unembedding")
 
 	var (
 		model = gonet.SequentialModel(

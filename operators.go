@@ -214,17 +214,20 @@ func Softmax(t float64, prev ...*Node) []*Node {
 	return outs
 }
 
-func Linear(ws, xs []*Node, bias *Node) *Node {
+func Linear(ws, xs []*Node, bias *Node, names ...string) *Node {
 	var (
 		noGrad = cmp.Or(ws[0].noGrad, xs[0].noGrad)
 		out    = &Node{
-			name:   "linear",
+			name:   "Linear",
 			prev:   append(append([]*Node{}, ws...), xs...),
 			noGrad: noGrad,
 		}
 	)
 	if bias != nil {
 		out.prev = append(out.prev, bias)
+	}
+	if len(names) > 0 {
+		out.name = names[0]
 	}
 
 	out.forward = func() {
@@ -253,7 +256,7 @@ func Linear(ws, xs []*Node, bias *Node) *Node {
 }
 
 func DotProduct(left, right []*Node) *Node {
-	return Linear(left, right, nil)
+	return Linear(left, right, nil, "DotProduct")
 }
 
 func VectorAdd(left, right []*Node) (out []*Node) {

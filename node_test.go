@@ -62,20 +62,13 @@ func TestNode(t *testing.T) {
 	)
 	ce.ForwardBackward()
 
-	// Test Node.bfs()
-	forwardOrder := []*Node{
-		ksi11, ksi12, ksi21, ksi22, ksi1, ksi2,
-		y1, y2, eta11, eta12, eta21, eta22, eta1, eta2,
-		z1, z2, ce,
-	}
-	assert.Equal(t, forwardOrder, ce.forwardOrder)
 	// Test Node.topologicalSort()
-	backwardOrder := []*Node{
-		ce, z2, z1, eta2, eta22, u22, eta21, u21, c2, eta1,
-		eta12, y2, ksi2, ksi22, w22, ksi21, w21, b2, u12, eta11,
-		y1, ksi1, ksi12, x2, w12, ksi11, x1, w11, b1, u11, c1,
+	topoOrder := []*Node{
+		c1, u11, b1, w11, x1, ksi11, w12, x2, ksi12, ksi1, y1,
+		eta11, u12, b2, w21, ksi21, w22, ksi22, ksi2, y2, eta12,
+		eta1, c2, u21, eta21, u22, eta22, eta2, z1, z2, ce,
 	}
-	assert.Equal(t, backwardOrder, ce.backwardOrder)
+	assert.Equal(t, topoOrder, ce.topoOrder)
 
 	assert.Equal(t, -2.5, ksi11.V())
 	assert.Equal(t, "w11×x1", ksi11.Name())

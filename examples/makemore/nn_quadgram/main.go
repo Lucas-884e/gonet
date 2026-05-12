@@ -77,8 +77,8 @@ func main() {
 
 	var (
 		model   = newModel(vocabSize)
-		predict = func(num int, stage string) func() {
-			return func() {
+		predict = func(num int, stage string) func(...string) {
+			return func(...string) {
 				for i := range num {
 					name := makemore.GenName(i2c, model.PredictNextProbs, ctxLen)
 					fmt.Printf("[%s] Generate name (%d | len=%d): %s\n", stage, i+1, len(name), name)

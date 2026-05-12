@@ -9,24 +9,29 @@ import (
 	"github.com/LucasInOz/gonet/util"
 )
 
-func NewEmbedding(vocabSize, dim int, initNorm bool) *Embedding {
+func NewEmbedding(vocabSize, dim int, initNorm bool, names ...string) *Embedding {
 	var (
 		mat     = make([]*Node, vocabSize*dim)
 		divisor = 1.0
+		name    = "Embedding"
 	)
 	if initNorm {
 		divisor = math.Sqrt(float64(dim))
 	}
+	if len(names) > 0 {
+		name = names[0]
+	}
 	for i := range vocabSize {
 		for j := range dim {
 			v := rand.NormFloat64() / divisor
-			mat[i*dim+j] = NewNode(v, fmt.Sprintf("E_%d_%d", j, i))
+			mat[i*dim+j] = NewNode(v, fmt.Sprintf("%s_%d_%d", name, j, i))
 		}
 	}
 	return &Embedding{
 		matrix:    mat,
 		vocabSize: vocabSize,
 		dim:       dim,
+		name:      name,
 	}
 }
 
@@ -34,6 +39,7 @@ type Embedding struct {
 	matrix    []*Node
 	vocabSize int
 	dim       int
+	name      string
 }
 
 func (e *Embedding) E(index int) []*Node {
@@ -50,7 +56,7 @@ func (e *Embedding) EmbeddingFeed(in []*Node) (out []*Node) {
 	for _, n := range in {
 		for cidx := range e.dim {
 			o := &Node{
-				name:   fmt.Sprintf("Embedding_%d", cidx),
+				name:   fmt.Sprintf("%s_%d", e.name, cidx),
 				noGrad: noGrad,
 			}
 			o.forward = func() {
@@ -109,8 +115,8 @@ func (e *Embedding) S(index int) string {
 	return sb.String()
 }
 
-func EmbeddingLayer(vocabSize, dim int) Layer {
-	emb := NewEmbedding(vocabSize, dim, false)
+func EmbeddingLayer(vocabSize, dim int, names ...string) Layer {
+	emb := NewEmbedding(vocabSize, dim, false, names...)
 	return EmbeddingLayerFrom(emb)
 }
 
@@ -131,7 +137,7 @@ func (el *embeddingLayer) Parameters() []util.Parameter {
 func (*embeddingLayer) Name() string { return "EmbeddingLayer" }
 
 func UnembeddingLayer(dim, vocabSize int, bias bool) Layer {
-	emb := NewEmbedding(vocabSize, dim, true)
+	emb := NewEmbedding(vocabSize, dim, true, "Unembedding")
 	return UnembeddingLayerFrom(emb, bias)
 }
 
@@ -175,8 +181,8 @@ func PositionalEmbeddingLayer(vocabSize, ctxLen, dim int) Layer {
 		p.SetV(float64(i))
 	}
 	return &positionalEmbeddingLayer{
-		semantic:   EmbeddingLayer(vocabSize, dim),
-		positional: EmbeddingLayer(ctxLen, dim),
+		semantic:   EmbeddingLayer(vocabSize, dim, "TokEmbedding"),
+		positional: EmbeddingLayer(ctxLen, dim, "PosEmbedding"),
 		pos:        pos,
 	}
 }

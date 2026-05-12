@@ -4,6 +4,7 @@ import (
 	"flag"
 	"fmt"
 	"log"
+	"strconv"
 	"time"
 
 	"github.com/LucasInOz/gonet"
@@ -53,8 +54,11 @@ func main() {
 			xs := util.NumberSliceConvert[int, float64](in)
 			return util.Softmax(1, model.Predict(xs))
 		}
-		predict = func(num int, stage string) func() {
-			return func() {
+		predict = func(num int, stage string) func(...string) {
+			return func(params ...string) {
+				if len(params) > 0 {
+					num, _ = strconv.Atoi(params[0])
+				}
 				for i := range num {
 					name := makemore.GenName(i2c, pnext, ctxLen)
 					fmt.Printf("[%s] Generate name (%d | len=%d): %s\n", stage, i+1, len(name), name)

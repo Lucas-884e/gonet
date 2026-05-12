@@ -1,17 +1,18 @@
 package gonet
 
 import (
+	"fmt"
 	"math"
 
 	"github.com/LucasInOz/gonet/util"
 )
 
-func KQVLayer(embDim, headSize int) Layer {
+func KQVLayer(embDim, headSize, headIdx int) Layer {
 	return &kqvLayer{
 		embDim: embDim,
-		key:    LinearLayer(embDim, headSize, false),
-		query:  LinearLayer(embDim, headSize, false),
-		value:  LinearLayer(embDim, headSize, false),
+		key:    LinearLayer(embDim, headSize, false, fmt.Sprintf("K%d", headIdx)),
+		query:  LinearLayer(embDim, headSize, false, fmt.Sprintf("Q%d", headIdx)),
+		value:  LinearLayer(embDim, headSize, false, fmt.Sprintf("V%d", headIdx)),
 	}
 }
 
@@ -72,10 +73,10 @@ func MaskedAttention(ks, qs, vs [][]*Node) []*Node {
 	return util.MaskedAttention(ks, qs, vs, multiply, softmax)
 }
 
-func MaskedSelfAttentionLayer(embDim, headSize int) Layer {
+func MaskedSelfAttentionLayer(embDim, headSize, headIdx int) Layer {
 	return &maskedSelfAttentionLayer{
 		headSize: headSize,
-		kqv:      KQVLayer(embDim, headSize),
+		kqv:      KQVLayer(embDim, headSize, headIdx),
 	}
 }
 
@@ -95,32 +96,6 @@ func (al *maskedSelfAttentionLayer) Parameters() []util.Parameter {
 
 func (*maskedSelfAttentionLayer) Name() string { return "MaskedSelfAttentionLayer" }
 
-func MultiHeadAttentionLayer(embDim, headNum int, buildAttention func(int, int) Layer) Layer {
-	if embDim%headNum != 0 {
-		panic("embedding dimension must be a multiple of attention head number")
-	}
-
-	var (
-		headSize = embDim / headNum
-		heads    = make([]Layer, headNum)
-	)
-	for i := range headNum {
-		heads[i] = buildAttention(embDim, headSize)
-	}
-
-	return &multiHeadAttentionLayer{
-		headSize:   headSize,
-		heads:      heads,
-		projection: LinearLayer(embDim, embDim, true),
-	}
-}
-
-type multiHeadAttentionLayer struct {
-	headSize   int
-	heads      []Layer
-	projection Layer
-}
-
 func rearrangeMultiHeadOut[T any](out []T, headNum, headSize int) []T {
 	var (
 		newOut = make([]T, len(out))
@@ -134,6 +109,32 @@ func rearrangeMultiHeadOut[T any](out []T, headNum, headSize int) []T {
 		}
 	}
 	return newOut
+}
+
+func MultiHeadAttentionLayer(embDim, headNum int, buildAttention func(int, int, int) Layer) Layer {
+	if embDim%headNum != 0 {
+		panic("embedding dimension must be a multiple of attention head number")
+	}
+
+	var (
+		headSize = embDim / headNum
+		heads    = make([]Layer, headNum)
+	)
+	for i := range headNum {
+		heads[i] = buildAttention(embDim, headSize, i)
+	}
+
+	return &multiHeadAttentionLayer{
+		headSize:   headSize,
+		heads:      heads,
+		projection: LinearLayer(embDim, embDim, true),
+	}
+}
+
+type multiHeadAttentionLayer struct {
+	headSize   int
+	heads      []Layer
+	projection Layer
 }
 
 func (mhal *multiHeadAttentionLayer) Feed(in []*Node) []*Node {
@@ -155,7 +156,7 @@ func (mhal *multiHeadAttentionLayer) Parameters() (p []util.Parameter) {
 
 func (*multiHeadAttentionLayer) Name() string { return "MultiHeadAttentionLayer" }
 
-func AttentionBlockLayer(embDim, headNum int, buildAttention func(int, int) Layer) Layer {
+func AttentionBlockLayer(embDim, headNum int, buildAttention func(int, int, int) Layer) Layer {
 	return &attentionBlockLayer{
 		attention: MultiHeadAttentionLayer(embDim, headNum, buildAttention),
 		ffwd: SequentialModel(
@@ -180,14 +181,17 @@ func (abl *attentionBlockLayer) Feed(in []*Node) (out []*Node) {
 		values = abl.attention.Feed(abl.norm1.Feed(in))
 		ffwdIn = VectorAdd(in, values)
 	)
-	return VectorAdd(ffwdIn, abl.ffwd.Feed(abl.norm1.Feed(ffwdIn)))
+
+	ffwdIn = abl.norm1.Feed(ffwdIn)
+	return VectorAdd(ffwdIn, abl.ffwd.Feed(ffwdIn))
 }
 
 func (abl *attentionBlockLayer) Parameters() []util.Parameter {
 	p := abl.attention.Parameters()
 	p = append(p, abl.ffwd.Parameters()...)
 	p = append(p, abl.norm1.Parameters()...)
-	return append(p, abl.norm2.Parameters()...)
+	p = append(p, abl.norm2.Parameters()...)
+	return p
 }
 
 func (*attentionBlockLayer) Name() string { return "AttentionBlockLayer" }
