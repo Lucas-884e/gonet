@@ -43,22 +43,47 @@ Take embedding dimension = 96 and attention block layers = 3 as an example:
 
 ## Performance
 
-The following shows the model performance of generating 200 characters out of nothing:
+The following shows the model performance of generating 1000 characters out of
+nothing:
 
 ```
-Wan hactr warst
-fine,
-Der mond mull:
-Go ars frre gour pll keasesplan heclis, mar hare aither, thy mafar yolle walaves bute see!
+And rich, sit
+Is oft, I kill bless'd.
 
-Se
-Leald thun moth acibly:
-Wess gou brparestollenspraneen hitre iarmod
+LUCIO:
+Be heaven be his for sting Burga, I am to couch'd
+The blood uncieul, such in this
+away our not by
+Is she more fock'd comment,
+For their lay; you tomb-soleman beseechstorm should night:
+Spiliclant misdel'd I saids against the word, then trule, savily heads he wa love.
+
+Second George what consinuate dead, Thallow'd,
+And old unly be finds diance:
+Sraw I'll not part out Romeo?
+I was his haters with vale cadute, and players,
+So God's king Henry whose dannatuful speak may Vatusage:
+I am asnieve become's death;
+On gracious jot noble your the sorthold.
+Your bid brakes nothing been heaven the preperous
+Infille
+As behearies; follow voices as this extrems Coriolus,
+Says, how he surn thee! I dangry; stcen; more what that harve, to devitor: Planting to sweet, arried;
+Ha!
+Good, by yonder at wherefore of his but contrable into of Sar than if list.
+Come,' into faice,
+No fair befuren queen cowards is a kise. foul your great for thy friar a joy.
+
+AUFIDIUS:
+A
 ```
 
-This model is trained upon the first 100K characters in the "shakespeare.txt" dataset
-with following settings:
+This model is trained upon the [shakespeare.txt](../dataset/shakespeare.txt)
+dataset with following settings:
 
-| Context length | Attention layers | Attention heads | Embedding dimension |
-| -------------- | ---------------- | --------------- | ------------------- |
-| 8 | 3 | 4 | 64 |
+| Context length | Attention layers | Attention heads | Embedding dimension | Batch Size | Optimizer & Learning Rate |
+| --- | --- | --- | --- | --- | --- |
+| 12 | 3 | 6 | 96 | 20 | Adam & 0.0003 → 0.0001 |
+
+It consumed 5.5GB memory and reached a loss roughly at 1.60 on training set
+and 1.71 on validation set after 60,000 mini-batch iterations.

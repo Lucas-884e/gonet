@@ -24,9 +24,10 @@ video of the "Neural Networks: Zero to Hero" series taught by Andrej Karpathy.
 
 ## Name Generation
 
-After training, we reached a Cross Entropy Loss around 2.17 on the training set
-(10-dim embedding, 36-dim hidden layer size, 2385 parameters), which is far
-better than the bigram model. And the model can generate better-looking names:
+After training on the [names.txt](../dataset/names.txt) dataset, we reached a
+Cross Entropy Loss around 2.17 on the training set (10-dim embedding, 36-dim
+hidden layer size, 2385 parameters), which is far better than the bigram model.
+And the model can generate better-looking names:
 
 ```plain/text
 toyt

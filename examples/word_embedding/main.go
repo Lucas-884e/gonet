@@ -65,7 +65,7 @@ func trainEmbeddings(samples []util.Sample, vocabSize, dim int) (emb, unemb *gon
 			LearningRate:     0.01,
 			LogEpochInterval: 5000,
 		}
-		timeCost = gonet.Train(model, samples, &cfg, gonet.CrossEntropyLoss)
+		timeCost = gonet.Train(model, [][]util.Sample{samples}, &cfg, gonet.CrossEntropyLoss)
 	)
 	log.Printf("Training time cost: %s", timeCost)
 

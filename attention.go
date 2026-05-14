@@ -179,19 +179,16 @@ type attentionBlockLayer struct {
 func (abl *attentionBlockLayer) Feed(in []*Node) (out []*Node) {
 	var (
 		values = abl.attention.Feed(abl.norm1.Feed(in))
-		ffwdIn = VectorAdd(in, values)
+		ffwdIn = abl.norm1.Feed(VectorAdd(values, in))
 	)
-
-	ffwdIn = abl.norm1.Feed(ffwdIn)
-	return VectorAdd(ffwdIn, abl.ffwd.Feed(ffwdIn))
+	return VectorAdd(abl.ffwd.Feed(ffwdIn), ffwdIn)
 }
 
 func (abl *attentionBlockLayer) Parameters() []util.Parameter {
 	p := abl.attention.Parameters()
 	p = append(p, abl.ffwd.Parameters()...)
 	p = append(p, abl.norm1.Parameters()...)
-	p = append(p, abl.norm2.Parameters()...)
-	return p
+	return append(p, abl.norm2.Parameters()...)
 }
 
 func (*attentionBlockLayer) Name() string { return "AttentionBlockLayer" }

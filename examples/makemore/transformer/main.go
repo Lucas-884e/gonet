@@ -23,15 +23,15 @@ const (
 	headNum  = 6  // number of attention heads
 	embDim   = 96 // embedding space dimension
 
-	learningRate    = 0.001
-	samplesPerEpoch = 1000
 	batchSize       = 20
+	samplesPerEpoch = 500
+	learningRate    = 0.0003
 )
 
 func main() {
 	flag.Parse()
 
-	corpus := util.Must1(os.ReadFile(*data))[:5000]
+	corpus := util.Must1(os.ReadFile(*data))
 	log.Printf("First 300 characters from corpus (size=%d): \n<|BEGIN|>\n%s\n<|END|>", len(corpus), corpus[:300])
 	c2i := util.GenVocabFromCorpus([][]byte{corpus}, '\n')
 	i2c := util.GetIndexToToken(c2i)
@@ -68,8 +68,11 @@ func main() {
 		},
 	}
 	util.InteractiveTrain(&cfg, *interactive, func() time.Duration {
-		samples := randSamples(trainSet, ctxLen, samplesPerEpoch)
-		return gonet.Train(model, samples, &cfg, gonet.CrossEntropyLoss)
+		var (
+			trSamples  = randSamples(trainSet, ctxLen, samplesPerEpoch)
+			valSamples = randSamples(valSet, ctxLen, samplesPerEpoch)
+		)
+		return gonet.Train(model, [][]util.Sample{trSamples, valSamples}, &cfg, gonet.CrossEntropyLoss)
 	}, predict(50))
 
 	predict(200)()

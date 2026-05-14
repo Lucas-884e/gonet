@@ -4,21 +4,16 @@ import (
 	"cmp"
 	"fmt"
 	"log"
+	"math"
 	"time"
 
 	"github.com/LucasInOz/gonet/util"
 )
 
-func Train(model Model, samples []util.Sample, cfg *util.TrainConfig, lf LossFunction) time.Duration {
+func Train(model Model, samples [][]util.Sample, cfg *util.TrainConfig, lf LossFunction) time.Duration {
 	var (
-		logInterval  = cmp.Or(cfg.LogEpochInterval, 10)
-		params       = model.Parameters()
-		totalLossFn  = PredictLossFunc(model, lf)
-		lossFn       = TrainLossFunc(model, lf)
-		trainSamples = samples
-		loss         *Node
-		optimizer    util.Optimizer
-		delta        float64
+		params    = model.Parameters()
+		optimizer util.Optimizer
 	)
 	switch cfg.Optimizer {
 	case "sgd":
@@ -31,10 +26,24 @@ func Train(model Model, samples []util.Sample, cfg *util.TrainConfig, lf LossFun
 	fmt.Println("Number of parameters:", len(params))
 
 	// Evaluation before training.
-	totalLoss := totalLossFn(samples)
-	log.Printf("[Before training] total loss: %g", totalLoss)
+	var (
+		evalLossFn = PredictLossFunc(model, lf)
+		trsetLoss  = evalLossFn(samples[0])
+		valsetLoss = math.NaN()
+	)
+	if len(samples) > 1 {
+		valsetLoss = evalLossFn(samples[1])
+	}
+	log.Printf("[Before training] training set loss: %g | validation set loss: %g", trsetLoss, valsetLoss)
 
-	start := time.Now()
+	var (
+		delta        float64
+		loss         *Node
+		lossFn       = TrainLossFunc(model, lf)
+		trainSamples = samples[0]
+		logInterval  = cmp.Or(cfg.LogEpochInterval, 10)
+		start        = time.Now()
+	)
 	for ep := 0; ep < cfg.Epochs; ep++ {
 		// Prepare training samples for this epoch.
 		if cfg.Sampler != nil {
@@ -61,7 +70,10 @@ func Train(model Model, samples []util.Sample, cfg *util.TrainConfig, lf LossFun
 	timeCost := time.Since(start)
 
 	// Evaluation after training.
-	totalLoss = totalLossFn(samples)
-	log.Printf("[After training] total loss: %g", totalLoss)
+	trsetLoss = evalLossFn(samples[0])
+	if len(samples) > 1 {
+		valsetLoss = evalLossFn(samples[1])
+	}
+	log.Printf("[After training] training set loss: %g | validation set loss: %g", trsetLoss, valsetLoss)
 	return timeCost
 }

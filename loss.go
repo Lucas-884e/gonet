@@ -11,7 +11,7 @@ import (
 
 type (
 	LossFunction   func(actual, predicted []*Node) *Node
-	E2ELoss        func([]util.Sample) *Node
+	E2ETrainLoss   func([]util.Sample) *Node
 	E2EPredictLoss func([]util.Sample) float64
 )
 
@@ -78,7 +78,7 @@ func PredictLossFunc(model FeedForwarder, lf LossFunction) E2EPredictLoss {
 	}
 }
 
-func TrainLossFunc(model FeedForwarder, lf LossFunction) E2ELoss {
+func TrainLossFunc(model FeedForwarder, lf LossFunction) E2ETrainLoss {
 	var (
 		batch SampleBatch
 		loss  *Node

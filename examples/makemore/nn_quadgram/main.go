@@ -96,7 +96,7 @@ func main() {
 		LogEpochInterval: 10,
 	}
 	util.InteractiveTrain(&cfg, *interactive, func() time.Duration {
-		return gonet.Train(model.m, samples, &cfg, gonet.CrossEntropyLoss)
+		return gonet.Train(model.m, [][]util.Sample{samples}, &cfg, gonet.CrossEntropyLoss)
 	}, predict(5, "During training"))
 
 	fmt.Println(makemore.FormatEmbeddings(model.Embeddings(), ", "))

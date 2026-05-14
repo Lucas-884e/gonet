@@ -25,9 +25,10 @@ But the difference is that we did not include the normalization layer.
 
 ## Name Generation
 
-After training, we reached a Cross Entropy Loss around 2.126, which is slightly
-lower than the [nn_quadgram example](/examples/makemore/nn_quadgram/). And this
-model can achieve (maybe?) a slightly better performance of English name generation.
+After training on the [names.txt](../dataset/names.txt) dataset, we reached a
+Cross Entropy Loss around 2.126, which is slightly lower than the
+[nn_quadgram example](/examples/makemore/nn_quadgram/). And this model can
+achieve (maybe?) a slightly better performance of English name generation.
 Take a few for example:
 
 ```plain/text

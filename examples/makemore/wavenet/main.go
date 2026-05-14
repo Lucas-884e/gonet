@@ -75,7 +75,7 @@ func main() {
 		LogEpochInterval: 10,
 	}
 	util.InteractiveTrain(&cfg, *interactive, func() time.Duration {
-		return gonet.Train(model, samples, &cfg, gonet.CrossEntropyLoss)
+		return gonet.Train(model, [][]util.Sample{samples}, &cfg, gonet.CrossEntropyLoss)
 	}, predict(5, "During training"))
 
 	predict(20, "After training")()

@@ -67,7 +67,7 @@ func graphTrain(trainingSet, validationSet []util.Sample) {
 			StopEps:      0,
 			LearningRate: 0.03,
 		}
-		timeCost = gonet.Train(mlp, trainingSet, &cfg, gonet.MaxMarginLoss)
+		timeCost = gonet.Train(mlp, [][]util.Sample{trainingSet, validationSet}, &cfg, gonet.MaxMarginLoss)
 	)
 	log.Printf("Training time cost: %s", timeCost)
 
